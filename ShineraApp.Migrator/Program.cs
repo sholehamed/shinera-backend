@@ -1,1 +1,11 @@
-﻿Console.WriteLine("Hello, World!");
+using Microsoft.EntityFrameworkCore;
+using ShineraApp.Infrastructure.Persistence;
+
+var connection = Environment.GetEnvironmentVariable("ConnectionStrings__Shinera");
+if (string.IsNullOrWhiteSpace(connection))
+    throw new InvalidOperationException("Set ConnectionStrings__Shinera before running the migrator.");
+
+await using var db = new PlanCatalogDbContext(
+    new DbContextOptionsBuilder<PlanCatalogDbContext>().UseSqlServer(connection).Options);
+await db.Database.MigrateAsync();
+Console.WriteLine("Plan catalog migrations applied.");

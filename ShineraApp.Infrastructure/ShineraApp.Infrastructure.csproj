@@ -1,5 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <ProjectReference Include="..\ShineraApp.Application\ShineraApp.Application.csproj" />
     <ProjectReference Include="..\Infrastructure.Sharedkernel\Infrastructure.Sharedkernel.csproj" />
     <ProjectReference Include="..\ShineraApp.Domain\ShineraApp.Domain.csproj" />
   </ItemGroup>
