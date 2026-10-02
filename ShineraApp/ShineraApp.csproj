@@ -1,18 +1,23 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <UserSecretsId>7d63048c-6044-4117-b707-75422ac82eb1</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(EnableAppMonitoring)' == 'true'">
+    <DefineConstants>$(DefineConstants);APP_MONITORING</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="AppMonitoring.AspNetCore" />
+    <PackageReference Include="AppMonitoring.AspNetCore" Condition="'$(EnableAppMonitoring)' == 'true'" />
     <PackageReference Include="Scalar.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ShineraApp.Infrastructure\ShineraApp.Infrastructure.csproj" />
     <ProjectReference Include="..\ShineraApp.Application\ShineraApp.Application.csproj" />
     <ProjectReference Include="..\Web.Sharedkernel\Web.Sharedkernel.csproj" />
   </ItemGroup>

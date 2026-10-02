@@ -1,4 +1,4 @@
-﻿using Domain.SharedKernel.Entities;
+using Domain.SharedKernel.Entities;
 
 namespace ShineraApp.Domain.Entities
 {
@@ -26,10 +26,19 @@ namespace ShineraApp.Domain.Entities
             string currency)
         {
 
+            if (planId == Guid.Empty)
+                throw new ArgumentException("A plan is required.", nameof(planId));
+            if (!Enum.IsDefined(billingPeriod))
+                throw new ArgumentOutOfRangeException(nameof(billingPeriod));
+            ArgumentException.ThrowIfNullOrWhiteSpace(currency);
+            var normalizedCurrency = currency.Trim().ToUpperInvariant();
+            if (normalizedCurrency.Length != 3 || normalizedCurrency.Any(c => c < 'A' || c > 'Z'))
+                throw new ArgumentException("Use a three-letter currency code.", nameof(currency));
+
             PlanId = planId;
             BillingPeriod = billingPeriod;
-            Amount = amount;
-            Currency = currency.ToUpperInvariant();
+            ChangeAmount(amount);
+            Currency = normalizedCurrency;
 
             IsActive = true;
         }
