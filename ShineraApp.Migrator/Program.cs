@@ -8,4 +8,7 @@ if (string.IsNullOrWhiteSpace(connection))
 await using var db = new PlanCatalogDbContext(
     new DbContextOptionsBuilder<PlanCatalogDbContext>().UseSqlServer(connection).Options);
 await db.Database.MigrateAsync();
-Console.WriteLine("Plan catalog migrations applied.");
+await using var registration = new RegistrationDbContext(new DbContextOptionsBuilder<RegistrationDbContext>()
+    .UseSqlServer(connection, sql => sql.MigrationsHistoryTable("__RegistrationMigrationsHistory", "Workspace")).Options);
+await registration.Database.MigrateAsync();
+Console.WriteLine("Catalog and registration migrations applied.");

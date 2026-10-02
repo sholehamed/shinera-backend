@@ -1,3 +1,5 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Application.SharedKernel;
 using ShineraApp.Application.Features.Plans;
 using ShineraApp.Infrastructure;
@@ -14,6 +16,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddCustomCqrs(typeof(GetPublicPlansQuery).Assembly);
 builder.Services.AddPlanCatalog(builder.Configuration);
+builder.Services.AddRateLimiter(options => {
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("registration", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions {
+            PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+        }));
+});
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie();
@@ -32,6 +41,7 @@ builder.Services.AddAppMonitoring(options =>
 var app = builder.Build();
 app.MapEndpoints("api");
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 #if APP_MONITORING

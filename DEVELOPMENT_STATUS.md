@@ -14,19 +14,23 @@
 
 The initial GitHub snapshot had shared CQRS/Result/entity abstractions and Tenant/Branch/Plan domain classes. Application features, application persistence, migrations and test implementations were absent. The host had a sample weather endpoint and cookie authentication; it did not have working OpenIddict registration/login. These are not marked complete based on older external descriptions.
 
-## Next: registration foundation
+## Registration foundation completed
 
-Implement identity/owner, tenant and main-branch persistence/memberships, registration draft validation, transaction/idempotency and verified payment integration before enabling checkout. Keep UI and API permissions separate and enforce tenant ownership server-side. Build this with the existing CQRS and Result contracts; do not add a parallel mediator.
+- Config-gated public registration creates a hashed, unverified owner account, tenant, main branch, business profile, tenant/branch memberships, zero-price subscription and replay receipt atomically.
+- Server-side input/pricing validation, serializable transaction, unique constraints, idempotency and per-IP rate limiting. No client tenant/owner/branch IDs or amount are accepted.
+- Separate Workspace schema/migration; migrator applies Catalog before Workspace. Registration is off by default. No commercial values or free plans are seeded.
+- Frontend submits the actual API request only for server-enabled zero-price IRR plans and handles success/errors/retries without logging credentials or issuing pretend login/payment success.
 
-## Still missing
+## Still missing / release gates
 
-- Authenticated plan administration and approved production prices/feature assignments. The catalog intentionally returns an empty list on a new database rather than inventing commercial prices.
-- Real registration, OpenIddict login, subscriptions, onboarding, services, staff, customers, booking, VIP special requests and tenant/branch authorization.
-- SQL Server execution test for the generated migration. Relational tests use SQLite and do not prove SQL Server rowversion/concurrency behavior.
+- OpenIddict login/token issuance, contact verification, authenticated tenant/branch resolution and permissions, subscription entitlement enforcement and renewals. This is a provisioning foundation, not a complete authentication system.
+- Verified payment-provider integration; paid registration stays blocked. Authenticated catalog administration and approved production catalog values.
+- Services, staff, customers, booking and VIP special requests.
+- Live SQL Server migration/concurrency validation. SQLite does not prove SQL Server rowversion or concurrent-request behavior.
 
 ## Verification
 
-- `dotnet build ShineraApp.slnx -m:1`: passed.
-- `dotnet test tests/ShineraApp.Tests/ShineraApp.Tests.csproj -m:1`: 11 passed.
-- EF model/migration consistency and SQL generation checked; no live database was migrated.
-- Paired frontend: development build and 14 unit tests passed. Production build has pre-existing size-budget errors. Playwright cases exist, but browser download was unavailable in this workspace.
+- .NET build passed; 27 backend tests passed (11 catalog + 16 registration).
+- Both EF models checked against migrations; SQL generation checked. No live database migrated.
+- Paired frontend: 18 tests and development compilation passed. Existing production size-budget failures remain.
+- Playwright discovers 14 desktop/mobile cases; browser execution is unverified because the Chromium download returned an invalid archive in this environment.

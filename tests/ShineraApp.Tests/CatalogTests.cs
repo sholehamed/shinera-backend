@@ -22,7 +22,7 @@ public sealed class CatalogTestDbContext(DbContextOptions<CatalogTestDbContext> 
     public DbSet<Plan> Plans => Set<Plan>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PlanCatalogDbContext).Assembly);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PlanCatalogDbContext).Assembly, type => type.Namespace == "ShineraApp.Infrastructure.Persistence.Configurations");
         // SQLite has no SQL Server rowversion generator; only the test provider varies.
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
             modelBuilder.Entity(entity.ClrType).Property("RowVersion").IsRequired(false);

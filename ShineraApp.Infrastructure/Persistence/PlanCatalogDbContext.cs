@@ -16,6 +16,7 @@ public sealed class PlanCatalogDbContext(DbContextOptions<PlanCatalogDbContext> 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PlanCatalogDbContext).Assembly);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PlanCatalogDbContext).Assembly,
+            type => type.Namespace == "ShineraApp.Infrastructure.Persistence.Configurations");
     }
 }
