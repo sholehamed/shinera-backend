@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="ShineraApp.Application/ShineraApp.Application.csproj" Id="6a21845b-a256-41a5-9ecd-b19be5b6ddd9" />
+    <Project Path="ShineraApp.Domain/ShineraApp.Domain.csproj" Id="c7b10541-4db4-4634-9e7e-170a35c69c1c" />
+    <Project Path="ShineraApp.Infrastructure/ShineraApp.Infrastructure.csproj" Id="95e406d3-16a7-4a12-bb14-a933f866df99" />
+    <Project Path="ShineraApp.Migrator/ShineraApp.Migrator.csproj" Id="431c4794-32ca-441a-b4b6-19ef98a35370" />
+    <Project Path="ShineraApp/ShineraApp.csproj" Id="7226cf2b-c5ce-4349-a4f6-49e28ca3b39d" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <Project Path="Application.Sharedkernel/Application.Sharedkernel.csproj" Id="e7f7c5c8-657a-4d7b-a2f2-f929d8a8e5cb" />
+    <Project Path="Domain.Sharedkernel/Domain.Sharedkernel.csproj" Id="20edf328-cd09-4b74-a988-81726ecf3e6c" />
+    <Project Path="Infrastructure.Sharedkernel/Infrastructure.Sharedkernel.csproj" Id="9de29c63-b616-4958-b991-f704e5edcf6d" />
+    <Project Path="Web.Sharedkernel/Web.Sharedkernel.csproj" Id="fe69f9ea-fc79-40ce-8170-3eff998f2aa6" />
+  </Folder>
+  <Folder Name="/tests/" />
+</Solution>

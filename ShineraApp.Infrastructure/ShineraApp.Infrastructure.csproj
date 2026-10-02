@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Infrastructure.Sharedkernel\Infrastructure.Sharedkernel.csproj" />
+    <ProjectReference Include="..\ShineraApp.Domain\ShineraApp.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Persistance\Data\Configuration\" />
+  </ItemGroup>
+</Project>

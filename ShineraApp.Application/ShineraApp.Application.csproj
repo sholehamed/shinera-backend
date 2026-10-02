@@ -1,0 +1,10 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Application.Sharedkernel\Application.Sharedkernel.csproj" />
+    <ProjectReference Include="..\ShineraApp.Domain\ShineraApp.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Features\" />
+    <Folder Include="Interfaces\" />
+  </ItemGroup>
+</Project>

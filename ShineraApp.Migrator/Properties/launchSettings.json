@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ShineraApp.Migrator": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
