@@ -50,6 +50,29 @@ public static class DependencyInjections
         services.AddCustomCqrs<AppMappingProfile>(assembly);
 
         services.AddDataProtection();
+
+        var allowedOrigins = configuration
+            .GetSection("Identity:OpenIddict:AllowedOrigins")
+            .GetChildren()
+            .Select(child => child.Value)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Cast<string>()
+            .ToArray();
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy("shinera-web", policy =>
+            {
+                if (allowedOrigins.Length > 0)
+                {
+                    policy.WithOrigins(allowedOrigins)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                }
+            });
+        });
+
         services.AddScoped<CaptchaService>();
         services.AddScoped<IIdentityDbContext>(
             provider => provider.GetRequiredService<IdentityDbContext>());
@@ -127,6 +150,7 @@ public static class DependencyInjections
         this WebApplication app,
         IConfiguration configuration)
     {
+        app.UseCors("shinera-web");
         app.UseAuthentication();
         app.UseAuthorization();
 
