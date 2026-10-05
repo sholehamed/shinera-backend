@@ -1,4 +1,5 @@
 ﻿using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Features.Users;
 using Modules.System.Identity.Domain.Entities;
 
 namespace Modules.System.Identity.Application.Features.Users.Commands
@@ -8,9 +9,12 @@ namespace Modules.System.Identity.Application.Features.Users.Commands
     {
         public async Task Handle(UserDeleteCommand command, CancellationToken cancellationToken)
         {
-            User? entity = await context.Users.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken);
+            User? entity = await context.CurrentTenantUsers().FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken);
             Guard.Against.NotFound(command.Id, entity);
-            context.Users.Remove(entity);
+            // User is a global identity. Deletion must not cascade across workspaces.
+            // The legacy delete command deactivates the account until a dedicated
+            // anonymization/deletion workflow is introduced.
+            entity.IsActive = false;
             await context.SaveChangesAsync(cancellationToken);
         }
     }
