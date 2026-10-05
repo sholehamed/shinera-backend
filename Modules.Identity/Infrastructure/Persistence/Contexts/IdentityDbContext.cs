@@ -21,6 +21,7 @@ public class IdentityDbContext(
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<TenantMembership> TenantMemberships => Set<TenantMembership>();
     public DbSet<User> Users => Set<User>();
     public DbSet<UserGroup> UserGroups => Set<UserGroup>();
     public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
