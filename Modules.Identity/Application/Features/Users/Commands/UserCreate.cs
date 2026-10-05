@@ -1,6 +1,7 @@
 using Application.SharedKernel.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Features.Users;
 using Modules.System.Identity.Domain.Entities;
 
 namespace Modules.System.Identity.Application.Features.Users.Commands;
@@ -31,7 +32,7 @@ public sealed class UserCreateCommandValidator : AbstractValidator<UserCreateCom
         RuleFor(x => x.Username)
             .NotEmpty()
             .MustAsync(async (username, cancellationToken) =>
-                !await dbContext.Users.AnyAsync(
+                !await dbContext.CurrentTenantUsers().AnyAsync(
                     user => user.NormalizedUserName == username.Trim().ToUpperInvariant(),
                     cancellationToken))
             .WithMessage("Username is already in use.");
@@ -40,7 +41,7 @@ public sealed class UserCreateCommandValidator : AbstractValidator<UserCreateCom
             .NotEmpty()
             .EmailAddress()
             .MustAsync(async (email, cancellationToken) =>
-                !await dbContext.Users.AnyAsync(
+                !await dbContext.CurrentTenantUsers().AnyAsync(
                     user => user.NormalizedEmail == email.Trim().ToUpperInvariant(),
                     cancellationToken))
             .WithMessage("Email is already in use.");
