@@ -1,96 +1,46 @@
-﻿using Modules.System.Identity.Application.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using Modules.System.Identity.Application.Abstractions;
 
-namespace Modules.System.Identity.Application.Services
+namespace Modules.System.Identity.Application.Services;
+
+public sealed class TenantAccessResolver(
+    IIdentityDbContext db) : ITenantAccessResolver
 {
-    public sealed class TenantAccessResolver(
-     IIdentityDbContext db,
-     IDateTimeProvider clock) : ITenantAccessResolver
+    public async Task<(Guid[] Readable, Guid[] Writable)> ResolveAsync(
+        Guid userId,
+        bool isSuperAdmin,
+        CancellationToken cancellationToken)
     {
-        public async Task<(Guid[] Readable, Guid[] Writable)> ResolveAsync(
-            Guid userId, Guid homeTenantId, bool isSuperAdmin, CancellationToken ct)
+        Guid[] tenantIds;
+
+        if (isSuperAdmin)
         {
-            if (isSuperAdmin)
-            {
-                var all = await db.Tenants.AsNoTracking()
-                    .Where(t => t.IsActive)
-                    .Select(t => t.Id)
-                    .ToArrayAsync(ct);
-
-                Array.Sort(all);
-                return (all, all);
-            }
-
-            // پیش‌فرض: فقط تننت خودش
-            var read = new HashSet<Guid> { homeTenantId };
-            var write = new HashSet<Guid> { homeTenantId };
-
-            var now = clock.UtcNow;
-
-            var grants = await db.UserTenantAccess.AsNoTracking()
-                .Where(a => a.UserId == userId
-                         && (a.ExpiresAt == null || a.ExpiresAt > now))
-                .Select(a => new
-                {
-                    a.TenantId,
-                    a.CanRead,
-                    a.CanWrite,
-                    a.IncludeDescendants,
-                    a.IsDenied
-                })
-                .ToListAsync(ct);
-
-            if (grants.Count > 0)
-            {
-                var roots = grants.Select(g => g.TenantId).Distinct().ToArray();
-
-                // یک رفت‌وبرگشت برای همه زیردرخت‌ها
-                var closures = await db.TenantClosure.AsNoTracking()
-                    .Where(c => roots.Contains(c.AncestorTenantId)
-                             && c.DescendantTenant!.IsActive)
-                    .Select(c => new { c.AncestorTenantId, c.DescendantTenantId, c.Depth })
-                    .ToListAsync(ct);
-
-                var byRoot = closures
-                    .GroupBy(c => c.AncestorTenantId)
-                    .ToDictionary(g => g.Key, g => g.ToArray());
-
-                var denyRead = new HashSet<Guid>();
-                var denyWrite = new HashSet<Guid>();
-
-                foreach (var g in grants)
-                {
-                    if (!byRoot.TryGetValue(g.TenantId, out var nodes)) continue;
-
-                    var targets = g.IncludeDescendants
-                        ? nodes.Select(n => n.DescendantTenantId)
-                        : nodes.Where(n => n.Depth == 0).Select(n => n.DescendantTenantId);
-
-                    foreach (var id in targets)
-                    {
-                        if (g.IsDenied)
-                        {
-                            if (g.CanRead) denyRead.Add(id);
-                            if (g.CanWrite) denyWrite.Add(id);
-                        }
-                        else
-                        {
-                            if (g.CanRead) read.Add(id);
-                            if (g.CanWrite) write.Add(id);
-                        }
-                    }
-                }
-
-                // Deny همیشه بر Allow غالب است
-                read.ExceptWith(denyRead);
-                write.ExceptWith(denyWrite);
-            }
-
-            write.IntersectWith(read);                 // نوشتن بدون خواندن بی‌معناست
-
-            var r = read.ToArray(); Array.Sort(r);
-            var w = write.ToArray(); Array.Sort(w);
-            return (r, w);
+            tenantIds = await db.Tenants
+                .AsNoTracking()
+                .Where(tenant => tenant.IsActive)
+                .Select(tenant => tenant.Id)
+                .ToArrayAsync(cancellationToken);
         }
-    }
+        else
+        {
+            // Resolving workspace membership happens before an active Tenant exists,
+            // so bypassing only the named Tenant filter is intentional here.
+            tenantIds = await db.TenantMemberships
+                .IgnoreQueryFilters(["tenant"])
+                .AsNoTracking()
+                .Where(membership =>
+                    membership.UserId == userId &&
+                    membership.IsActive &&
+                    membership.Tenant.IsActive)
+                .Select(membership => membership.TenantId)
+                .Distinct()
+                .ToArrayAsync(cancellationToken);
+        }
 
+        Array.Sort(tenantIds);
+
+        // Membership establishes workspace access. Action-level write authorization
+        // is evaluated separately by the permission system.
+        return (tenantIds, tenantIds);
+    }
 }
