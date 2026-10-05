@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Modules.System.Identity;
 using Scalar.ClientGeneration;
 using Web.SharedKernel;
 using Web.SharedKernel.Exceptions;
@@ -9,6 +10,8 @@ builder.Services.AddBaseApiServices();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
+
+builder.Services.AddIdentityModule(builder.Configuration);
 
 builder.Services.AddScalarClientGeneration();
 builder.Services.AddOpenApi();
@@ -24,6 +27,8 @@ if (app.Environment.IsDevelopment())
 
 app.MapScalarWithClientGeneration();
 app.UseHttpsRedirection();
+
+app.UseIdentityModule(builder.Configuration);
 
 app.MapHealthChecks(
     "/health/live",

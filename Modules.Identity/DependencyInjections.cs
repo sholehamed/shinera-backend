@@ -1,5 +1,6 @@
-﻿using Application.SharedKernel;
+using Application.SharedKernel;
 using Infrastructure.SharedKernel;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,102 +12,123 @@ using Modules.System.Identity.Domain.Entities;
 using Modules.System.Identity.Infrastructure.Persistence;
 using Modules.System.Identity.Infrastructure.Persistence.Contexts;
 using Modules.System.Identity.Infrastructure.Persistence.Interceptors;
+using Modules.System.Identity.Web.Authentication;
 using Modules.System.Identity.Web.Middlewares;
 using Modules.System.Identity.Web.Util;
 using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
 using System.Reflection;
-namespace Modules.System.Identity
+
+namespace Modules.System.Identity;
+
+public static class DependencyInjections
 {
-    public static class DependencyInjections
+    public static IServiceCollection AddIdentityModule(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
-        public static IServiceCollection AddIdentityModule(this IServiceCollection services, IConfiguration configuration)
-        {
-            services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
-            services.AddScoped<ICurrentUser, CurrentUser>();
+        services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+        services.AddScoped<ICurrentUser, CurrentUser>();
 
-            services.AddScoped<ITenantContext, TenantContext>();
-            services.AddScoped<ITenantAccessResolver, TenantAccessResolver>();
-            services.AddScoped<TenantSaveChangesInterceptor>();
-            services.AddBaseInfrastructureServices<IdentityDbContext>(configuration, "Identity", (sp,options) =>
-        {
-            options.AddInterceptors(sp.GetRequiredService<TenantSaveChangesInterceptor>());
-            options.UseOpenIddict();
-        });
-            services.AddScoped<ApiResourceSyncService, ApiResourceSyncService>();
-            var assembly = Assembly.GetExecutingAssembly();
-            services.AddCustomCqrs<AppMappingProfile>(assembly); services.AddDataProtection();
-            services.AddScoped<CaptchaService>();
-            services.AddScoped<IIdentityDbContext>(provider =>
-           provider.GetRequiredService<IdentityDbContext>());
-            services.AddScoped<IPermissionResolver, RoutePermissionResolver>();
-            services.AddScoped<IPermissionChecker, DbPermissionChecker>();
-            services.AddOpenIddict()
+        services.AddScoped<ITenantContext, TenantContext>();
+        services.AddScoped<ITenantAccessResolver, TenantAccessResolver>();
+        services.AddScoped<TenantSaveChangesInterceptor>();
 
-                .AddCore(options =>
-                {
-                    options.UseEntityFrameworkCore()
-                           .UseDbContext<IdentityDbContext>();
-                })
+        services.AddBaseInfrastructureServices<IdentityDbContext>(
+            configuration,
+            "Identity",
+            (sp, options) =>
+            {
+                options.AddInterceptors(sp.GetRequiredService<TenantSaveChangesInterceptor>());
+                options.UseOpenIddict();
+            });
 
-                .AddServer(options =>
-                {
-                    options.SetTokenEndpointUris("api/system/Auth/login");
-                    options.SetAuthorizationEndpointUris("api/connect/authorize");
-                    options.SetEndSessionEndpointUris("api/system/Auth/logout");
-                    options.SetUserInfoEndpointUris("api/system/Auth/userinfo");
+        services.AddScoped<ApiResourceSyncService>();
 
-                    options.AllowPasswordFlow();
-                    options.AllowRefreshTokenFlow();
-                    options.AllowAuthorizationCodeFlow()
-                           .RequireProofKeyForCodeExchange();
+        var assembly = Assembly.GetExecutingAssembly();
+        services.AddCustomCqrs<AppMappingProfile>(assembly);
 
-                    options.AcceptAnonymousClients();
+        services.AddDataProtection();
+        services.AddScoped<CaptchaService>();
+        services.AddScoped<IIdentityDbContext>(
+            provider => provider.GetRequiredService<IdentityDbContext>());
+        services.AddScoped<IPermissionResolver, RoutePermissionResolver>();
+        services.AddScoped<IPermissionChecker, DbPermissionChecker>();
 
-                    options.RegisterScopes("api", "profile", "email", "roles", "permissions", OpenIddictConstants.Scopes.OfflineAccess);
+        services.AddOpenIddict()
+            .AddCore(options =>
+            {
+                options.UseEntityFrameworkCore()
+                    .UseDbContext<IdentityDbContext>();
+            })
+            .AddServer(options =>
+            {
+                options.SetAuthorizationEndpointUris("/connect/authorize");
+                options.SetTokenEndpointUris("/connect/token");
+                options.SetEndSessionEndpointUris("/connect/logout");
 
-                    options.SetAccessTokenLifetime(TimeSpan.FromMinutes(30));
-                    options.SetRefreshTokenLifetime(TimeSpan.FromDays(30));
+                options.AllowAuthorizationCodeFlow();
+                options.AllowRefreshTokenFlow();
+                options.RequireProofKeyForCodeExchange();
 
-                    options.AddDevelopmentEncryptionCertificate()
-                           .AddDevelopmentSigningCertificate();
+                options.RegisterScopes("shinera_api");
 
-                    options.UseAspNetCore()
-                           .EnableTokenEndpointPassthrough()
-                           .EnableAuthorizationEndpointPassthrough()
-                           .EnableEndSessionEndpointPassthrough()
-                           .EnableUserInfoEndpointPassthrough();
+                options.SetAccessTokenLifetime(TimeSpan.FromMinutes(15));
+                options.SetRefreshTokenLifetime(TimeSpan.FromDays(30));
 
-                    options.DisableAccessTokenEncryption(); // optional for JWT readability
-                })
+                // Rolling refresh tokens and sliding refresh-token expiration are
+                // secure defaults in OpenIddict and deliberately remain enabled.
+                // Token and authorization storage also remain enabled.
 
-                .AddValidation(options =>
-                {
-                    options.UseLocalServer();
-                    options.UseAspNetCore();
-                });
-            services.AddAuthentication(options =>
+                options.AddDevelopmentEncryptionCertificate()
+                    .AddDevelopmentSigningCertificate();
+
+                options.UseAspNetCore()
+                    .EnableAuthorizationEndpointPassthrough()
+                    .EnableTokenEndpointPassthrough()
+                    .EnableEndSessionEndpointPassthrough();
+            })
+            .AddValidation(options =>
+            {
+                options.UseLocalServer();
+                options.UseAspNetCore();
+            });
+
+        services
+            .AddAuthentication(options =>
             {
                 options.DefaultScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
                 options.DefaultAuthenticateScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
-            });
-            services.AddScoped<ISeedContributor, DefaultIdentitySeedContributor>();
-            services.AddAuthorization();
-            return services;
-        }
-        public static WebApplication UseIdentityModule(this WebApplication app,IConfiguration configuration)
-        {
-            var assembly = typeof(IdentityDbContext).Assembly;
+            })
+            .AddCookie(
+                InteractiveAuthenticationDefaults.Scheme,
+                options =>
+                {
+                    options.Cookie.Name = "__Host-Shinera.Interactive";
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.SameSite = SameSiteMode.Lax;
+                    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+                    options.SlidingExpiration = true;
+                });
 
-            app.UseAuthentication();
-            app.UseAuthorization();
-            //DbSeeder.SeedAsync(app.Services).Wait();
-            //app.UseMiddleware<PermissionMiddleware>();
-            app.UseMiddleware<TenantResolutionMiddleware>();
-            app.MapEndpoints($"{configuration["BackendPrefix"]}System");
+        services.AddScoped<ISeedContributor, DefaultIdentitySeedContributor>();
+        services.AddAuthorization();
 
-            return app;
-        }
+        return services;
+    }
+
+    public static WebApplication UseIdentityModule(
+        this WebApplication app,
+        IConfiguration configuration)
+    {
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        app.UseMiddleware<TenantResolutionMiddleware>();
+        app.MapEndpoints($"{configuration["BackendPrefix"]}System");
+
+        return app;
     }
 }
