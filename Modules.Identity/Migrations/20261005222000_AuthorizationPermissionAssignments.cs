@@ -167,54 +167,6 @@ public partial class AuthorizationPermissionAssignments : Migration
                 "IsActive"
             });
 
-        // ADR-003 removes Group as an authorization subject.
-        // Preserve existing effective access by materializing active group-derived
-        // role memberships as direct UserRole rows before switching evaluators.
-        migrationBuilder.Sql(
-            """
-            INSERT INTO [UserRoles]
-            (
-                [Id],
-                [TenantId],
-                [UserId],
-                [RoleId],
-                [CreatedBy],
-                [CreatedAt],
-                [CreatedByIp],
-                [LastModifiedBy],
-                [LastModifiedAt],
-                [LastModifiedByIp]
-            )
-            SELECT
-                NEWID(),
-                ug.[TenantId],
-                ug.[UserId],
-                gr.[RoleId],
-                ug.[CreatedBy],
-                ug.[CreatedAt],
-                ug.[CreatedByIp],
-                ug.[LastModifiedBy],
-                ug.[LastModifiedAt],
-                ug.[LastModifiedByIp]
-            FROM [UserGroups] ug
-            INNER JOIN [Groups] g
-                ON g.[Id] = ug.[GroupId]
-               AND g.[TenantId] = ug.[TenantId]
-            INNER JOIN [GroupRoles] gr
-                ON gr.[GroupId] = ug.[GroupId]
-               AND gr.[TenantId] = ug.[TenantId]
-            WHERE g.[IsActive] = 1
-              AND gr.[IsDeleted] = 0
-              AND NOT EXISTS
-              (
-                  SELECT 1
-                  FROM [UserRoles] ur
-                  WHERE ur.[TenantId] = ug.[TenantId]
-                    AND ur.[UserId] = ug.[UserId]
-                    AND ur.[RoleId] = gr.[RoleId]
-              );
-            """);
-
         migrationBuilder.Sql(
             """
             INSERT INTO [PermissionAssignments]
@@ -310,6 +262,68 @@ public partial class AuthorizationPermissionAssignments : Migration
                   AND pa.[ScopeType] = 1
                   AND pa.[ScopeReferenceId] IS NULL
             );
+            """);
+
+        // Group is no longer an authorization subject in ADR-003.
+        // Preserve legacy group-derived effective permissions as direct User
+        // assignments. They disappear automatically if this migration is rolled back.
+        migrationBuilder.Sql(
+            """
+            INSERT INTO [PermissionAssignments]
+            (
+                [Id],
+                [TenantId],
+                [PermissionId],
+                [SubjectType],
+                [SubjectId],
+                [ScopeType],
+                [ScopeReferenceId],
+                [IsActive],
+                [CreatedBy],
+                [CreatedAt],
+                [CreatedByIp],
+                [LastModifiedBy],
+                [LastModifiedAt],
+                [LastModifiedByIp]
+            )
+            SELECT DISTINCT
+                NEWID(),
+                ug.[TenantId],
+                rp.[PermissionId],
+                2,
+                ug.[UserId],
+                1,
+                NULL,
+                CAST(1 AS bit),
+                ug.[CreatedBy],
+                ug.[CreatedAt],
+                ug.[CreatedByIp],
+                ug.[LastModifiedBy],
+                ug.[LastModifiedAt],
+                ug.[LastModifiedByIp]
+            FROM [UserGroups] ug
+            INNER JOIN [Groups] g
+                ON g.[Id] = ug.[GroupId]
+               AND g.[TenantId] = ug.[TenantId]
+            INNER JOIN [GroupRoles] gr
+                ON gr.[GroupId] = ug.[GroupId]
+               AND gr.[TenantId] = ug.[TenantId]
+            INNER JOIN [RolePermissions] rp
+                ON rp.[RoleId] = gr.[RoleId]
+               AND rp.[TenantId] = ug.[TenantId]
+            WHERE g.[IsActive] = 1
+              AND gr.[IsDeleted] = 0
+              AND NOT EXISTS
+              (
+                  SELECT 1
+                  FROM [PermissionAssignments] pa
+                  WHERE pa.[TenantId] = ug.[TenantId]
+                    AND pa.[PermissionId] = rp.[PermissionId]
+                    AND pa.[SubjectType] = 2
+                    AND pa.[SubjectId] = ug.[UserId]
+                    AND pa.[ScopeType] = 1
+                    AND pa.[ScopeReferenceId] IS NULL
+              );
             """);
     }
 
