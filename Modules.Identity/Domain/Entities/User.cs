@@ -19,19 +19,6 @@ public class User : AuditableEntity
 
     [Obsolete("M0.1 compatibility constructor for legacy development seed data only.")]
     public User(
-        Guid legacyTenantId,
-        string userName,
-        string email,
-        string? firstName,
-        string? lastName,
-        bool isActive = true) : base(17)
-    {
-        TenantId = legacyTenantId;
-        SetIdentity(userName, email, firstName, lastName, isActive);
-    }
-
-    [Obsolete("M0.1 compatibility constructor for legacy development seed data only.")]
-    public User(
         Guid id,
         Guid legacyTenantId,
         string userName,
