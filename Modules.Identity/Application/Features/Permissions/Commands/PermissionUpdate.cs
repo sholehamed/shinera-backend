@@ -48,8 +48,12 @@ namespace Modules.System.Identity.Application.Features.Permissions.Commands
             private async Task<bool> BeUniqueCode(PermissionUpdateCommand command, string code, CancellationToken cancellationToken)
             {
                 // بررسی اینکه آیا کدی مشابه با شناسه متفاوت وجود دارد یا خیر
+                var normalizedCode = code.Trim().ToLowerInvariant();
+
                 return !await _context.Permissions
-                    .AnyAsync(x => x.Code == code && x.Id != command.Id, cancellationToken);
+                    .AnyAsync(
+                        x => x.Code == normalizedCode && x.Id != command.Id,
+                        cancellationToken);
             }
         }
         public class PermissionUpdateCommandHandler : ICommandHandler<PermissionUpdateCommand>
@@ -83,6 +87,7 @@ namespace Modules.System.Identity.Application.Features.Permissions.Commands
                 Guard.Against.NotFound(command.Id, entity);
 
                 _mapper.Map(command, entity);
+                entity.SetKey(command.Code);
 
                 var newApiResourceIds = apiResources.Distinct().ToHashSet();
                 var currentApiResourceIds = entity.ApiResources.Select(x => x.ApiResourceId).ToHashSet();
