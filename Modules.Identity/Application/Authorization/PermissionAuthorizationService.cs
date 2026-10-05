@@ -30,6 +30,7 @@ public sealed class PermissionAuthorizationService(
             .AsNoTracking()
             .AnyAsync(
                 membership =>
+                    membership.TenantId == tenantId.Value &&
                     membership.UserId == userId &&
                     membership.IsActive,
                 cancellationToken);
@@ -61,6 +62,7 @@ public sealed class PermissionAuthorizationService(
         var roleIds = dbContext.UserRoles
             .AsNoTracking()
             .Where(userRole =>
+                userRole.TenantId == tenantId.Value &&
                 userRole.UserId == userId &&
                 userRole.Role.IsActive)
             .Select(userRole => userRole.RoleId);
@@ -68,6 +70,7 @@ public sealed class PermissionAuthorizationService(
         var assignments = await dbContext.PermissionAssignments
             .AsNoTracking()
             .Where(assignment =>
+                assignment.TenantId == tenantId.Value &&
                 assignment.IsActive &&
                 assignment.PermissionId == permissionId.Value &&
                 (
@@ -123,6 +126,7 @@ public sealed class PermissionAuthorizationService(
             .AsNoTracking()
             .AnyAsync(
                 membership =>
+                    membership.TenantId == tenantId.Value &&
                     membership.UserId == userId &&
                     membership.IsActive,
                 cancellationToken);
@@ -133,6 +137,7 @@ public sealed class PermissionAuthorizationService(
         var roleIds = dbContext.UserRoles
             .AsNoTracking()
             .Where(userRole =>
+                userRole.TenantId == tenantId.Value &&
                 userRole.UserId == userId &&
                 userRole.Role.IsActive)
             .Select(userRole => userRole.RoleId);
@@ -140,6 +145,7 @@ public sealed class PermissionAuthorizationService(
         return await dbContext.PermissionAssignments
             .AsNoTracking()
             .Where(assignment =>
+                assignment.TenantId == tenantId.Value &&
                 assignment.IsActive &&
                 assignment.Permission.IsActive &&
                 assignment.Permission.Resource != null &&
