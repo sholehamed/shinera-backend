@@ -1,4 +1,5 @@
 ﻿using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Features.Users;
 using Modules.System.Identity.Domain.Entities;
 
 namespace Modules.System.Identity.Application.Features.Users.Queries
@@ -35,7 +36,7 @@ namespace Modules.System.Identity.Application.Features.Users.Queries
     {
         public async Task<PagedList<UserPagedListDto>> Handle(UserPagedListQuery request, CancellationToken cancellationToken)
         {
-            var _list = dbContext.Users.AsNoTracking();
+            var _list = dbContext.CurrentTenantUsers().AsNoTracking();
             var res = await request.ToPaging(_list, mapper);
             return res;
         }
