@@ -1033,6 +1033,62 @@ namespace Modules.Identity.Migrations
                     b.ToTable("UiResources");
                 });
 
+            modelBuilder.Entity("Modules.System.Identity.Domain.Entities.TenantMembership", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("LastModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("LastModifiedByIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .IsDescending();
+
+                    b.HasIndex("TenantId", "UserId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TenantMemberships");
+                });
+
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1113,11 +1169,7 @@ namespace Modules.Identity.Migrations
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("UserName")
+b.Property<string>("UserName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -1127,13 +1179,30 @@ namespace Modules.Identity.Migrations
                     b.HasIndex("CreatedAt")
                         .IsDescending();
 
-                    b.HasIndex("TenantId", "NormalizedEmail")
-                        .IsUnique();
+                    b.HasIndex("NormalizedEmail");
 
-                    b.HasIndex("TenantId", "NormalizedUserName")
-                        .IsUnique();
+                    b.HasIndex("NormalizedUserName");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Modules.System.Identity.Domain.Entities.TenantMembership", b =>
+                {
+                    b.HasOne("Modules.System.Identity.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Memberships")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Modules.System.Identity.Domain.Entities.User", "User")
+                        .WithMany("TenantMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.UserGroup", b =>
@@ -1789,17 +1858,6 @@ namespace Modules.Identity.Migrations
                     b.Navigation("Resource");
                 });
 
-            modelBuilder.Entity("Modules.System.Identity.Domain.Entities.User", b =>
-                {
-                    b.HasOne("Modules.System.Identity.Domain.Entities.Tenant", "Tenant")
-                        .WithMany("Users")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.UserGroup", b =>
                 {
                     b.HasOne("Modules.System.Identity.Domain.Entities.Group", "Group")
@@ -1958,9 +2016,9 @@ namespace Modules.Identity.Migrations
 
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.Tenant", b =>
                 {
-                    b.Navigation("TenantModules");
+                    b.Navigation("Memberships");
 
-                    b.Navigation("Users");
+                    b.Navigation("TenantModules");
                 });
 
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.UiResource", b =>
@@ -1970,6 +2028,8 @@ namespace Modules.Identity.Migrations
 
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.User", b =>
                 {
+                    b.Navigation("TenantMemberships");
+
                     b.Navigation("UserGroups");
 
                     b.Navigation("UserPermissions");
