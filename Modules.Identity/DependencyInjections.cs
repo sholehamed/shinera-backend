@@ -155,9 +155,8 @@ public static class DependencyInjections
     {
         app.UseCors("shinera-web");
         app.UseAuthentication();
-        app.UseAuthorization();
-
         app.UseMiddleware<TenantResolutionMiddleware>();
+        app.UseAuthorization();
 
         app.MapOpenIddictProtocolEndpoints(configuration);
         app.MapEndpoints($"{configuration["BackendPrefix"]}System");
