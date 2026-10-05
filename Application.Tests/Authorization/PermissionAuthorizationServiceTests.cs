@@ -36,7 +36,8 @@ public sealed class PermissionAuthorizationServiceTests
         var decision = await fixture.Service.AuthorizeAsync(
             userId,
             "appointments",
-            "view");
+            "view",
+            new PermissionScopeContext());
 
         Assert.True(decision.IsAllowed);
         Assert.Equal(PermissionScopeType.Tenant, decision.MatchedScope);
@@ -51,7 +52,7 @@ public sealed class PermissionAuthorizationServiceTests
         await using var fixture = await CreateFixtureAsync(tenantId, userId);
         await fixture.SeedPermissionAsync("appointments", "create");
 
-        var decision = await fixture.Service.AuthorizeAsync(
+        var decision = await fixture.Service.HasPermissionAsync(
             userId,
             "appointments",
             "create");
@@ -89,7 +90,7 @@ public sealed class PermissionAuthorizationServiceTests
             await fixture.Db.SaveChangesAsync();
         }
 
-        var decision = await fixture.Service.AuthorizeAsync(
+        var decision = await fixture.Service.HasPermissionAsync(
             userId,
             "appointments",
             "view");
@@ -181,6 +182,48 @@ public sealed class PermissionAuthorizationServiceTests
         Assert.Equal("customers.view", permission.Key);
         Assert.Equal("Own", permission.Scope);
         Assert.Null(permission.ScopeReferenceId);
+    }
+
+    [Fact]
+    public async Task EndpointPermissionGate_AllowsOwnGrantWithoutResourceContext()
+    {
+        var tenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        await using var fixture = await CreateFixtureAsync(tenantId, userId);
+        var permissionId = await fixture.SeedPermissionAsync(
+            "appointments",
+            "view");
+
+        fixture.Db.PermissionAssignments.Add(
+            new PermissionAssignment(
+                tenantId,
+                permissionId,
+                PermissionSubjectType.User,
+                userId,
+                PermissionScopeType.Own));
+
+        await fixture.Db.SaveChangesAsync();
+
+        var gate = await fixture.Service.HasPermissionAsync(
+            userId,
+            "appointments",
+            "view");
+
+        var resourceCheck = await fixture.Service.AuthorizeAsync(
+            userId,
+            "appointments",
+            "view",
+            new PermissionScopeContext(
+                OwnerUserId: Guid.NewGuid()));
+
+        Assert.True(gate.IsAllowed);
+        Assert.Equal(PermissionScopeType.Own, gate.MatchedScope);
+
+        Assert.False(resourceCheck.IsAllowed);
+        Assert.Equal(
+            PermissionDecisionCode.ScopeDenied,
+            resourceCheck.Code);
     }
 
     [Fact]
@@ -299,7 +342,8 @@ public sealed class PermissionAuthorizationServiceTests
         var decision = await fixture.Service.AuthorizeAsync(
             userId,
             "staff",
-            "manage");
+            "manage",
+            new PermissionScopeContext());
 
         Assert.False(decision.IsAllowed);
         Assert.Equal(PermissionDecisionCode.ScopeDenied, decision.Code);
@@ -334,7 +378,7 @@ public sealed class PermissionAuthorizationServiceTests
 
         await fixture.Db.SaveChangesAsync();
 
-        var decision = await fixture.Service.AuthorizeAsync(
+        var decision = await fixture.Service.HasPermissionAsync(
             userId,
             "customers",
             "view");
