@@ -16,19 +16,42 @@ namespace Modules.System.Identity.Domain.Entities
         public Permission(ulong id) : base(id, 7) { }
         public Permission(Guid id) : base(id) { }
 
-        public Permission(string code, Resource? resource, string name, string? description, bool isActive = true, List<Guid> apis = null, List<Guid> uis = null) : base(7)
+        public Permission(
+            string code,
+            Resource? resource,
+            string name,
+            string? description,
+            bool isActive = true,
+            List<Guid>? apis = null,
+            List<Guid>? uis = null) : base(7)
         {
             Code = NormalizeKey(code);
             Action = ExtractAction(Code);
-            ResourceId = resource.Id;
+            ResourceId = resource?.Id;
             Resource = resource;
             Name = name;
             Description = description;
             IsActive = isActive;
-            this.ApiResources = apis.Select(x => new PermissionApiResource(this, x)).ToList();
-            this.UiResources = uis.Select(x => new PermissionUiResource(this, x)).ToList();
+
+            if (apis is not null)
+                ApiResources = apis
+                    .Select(x => new PermissionApiResource(this, x))
+                    .ToList();
+
+            if (uis is not null)
+                UiResources = uis
+                    .Select(x => new PermissionUiResource(this, x))
+                    .ToList();
         }
-        public Permission(Guid id, string code, Guid? resourceId, string name, string? description, bool isActive = true, List<Guid> apis = null, List<Guid> uis = null) : base(id)
+        public Permission(
+            Guid id,
+            string code,
+            Guid? resourceId,
+            string name,
+            string? description,
+            bool isActive = true,
+            List<Guid>? apis = null,
+            List<Guid>? uis = null) : base(id)
         {
             Code = NormalizeKey(code);
             Action = ExtractAction(Code);
