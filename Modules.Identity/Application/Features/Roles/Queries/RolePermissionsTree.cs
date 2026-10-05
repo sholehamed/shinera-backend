@@ -1,4 +1,5 @@
 ﻿using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Domain.Entities;
 
 namespace Modules.System.Identity.Application.Features.Roles.Queries
 {
@@ -66,7 +67,7 @@ namespace Modules.System.Identity.Application.Features.Roles.Queries
             var selectedAssignments = await _context.PermissionAssignments
                 .AsNoTracking()
                 .Where(x =>
-                    x.SubjectType == Domain.Entities.PermissionSubjectType.Role &&
+                    x.SubjectType == PermissionSubjectType.Role &&
                     x.SubjectId == request.RoleId &&
                     x.IsActive)
                 .Select(x => new RolePermissionAssignmentDto(
