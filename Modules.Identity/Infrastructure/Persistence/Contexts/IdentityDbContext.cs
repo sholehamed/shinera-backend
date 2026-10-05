@@ -16,6 +16,7 @@ public class IdentityDbContext(
     public DbSet<Domain.Entities.Module> Modules => Set<Domain.Entities.Module>();
     public DbSet<PermissionApiResource> PermissionApiResources => Set<PermissionApiResource>();
     public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<PermissionAssignment> PermissionAssignments => Set<PermissionAssignment>();
     public DbSet<Resource> Resources => Set<Resource>();
     public DbSet<TenantModule> TenantModules => Set<TenantModule>();
     public DbSet<Role> Roles => Set<Role>();

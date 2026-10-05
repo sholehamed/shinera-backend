@@ -10,6 +10,7 @@ public interface IIdentityDbContext : IBaseDbContext
     DbSet<Module> Modules { get; }
     DbSet<PermissionApiResource> PermissionApiResources { get; }
     DbSet<Permission> Permissions { get; }
+    DbSet<PermissionAssignment> PermissionAssignments { get; }
     DbSet<PermissionUiResource> PermissionUiResources { get; }
     DbSet<Resource> Resources { get; }
     DbSet<RolePermission> RolePermissions { get; }
