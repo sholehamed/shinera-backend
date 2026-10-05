@@ -114,6 +114,7 @@ public static class DependencyInjections
                     options.SlidingExpiration = true;
                 });
 
+        services.AddScoped<ISeedContributor, OpenIddictWebClientSeedContributor>();
         services.AddScoped<ISeedContributor, DefaultIdentitySeedContributor>();
         services.AddAuthorization();
 
