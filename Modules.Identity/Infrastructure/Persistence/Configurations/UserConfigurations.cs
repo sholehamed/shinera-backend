@@ -8,11 +8,8 @@ internal sealed class UserConfigurations : AuditEntityConfiguration<User>
 {
     public override void Configure(EntityTypeBuilder<User> builder)
     {
-        builder.HasIndex(x => x.NormalizedUserName)
-            .IsUnique();
-
-        builder.HasIndex(x => x.NormalizedEmail)
-            .IsUnique();
+        builder.HasIndex(x => x.NormalizedUserName);
+        builder.HasIndex(x => x.NormalizedEmail);
 
         builder.Property(x => x.UserName)
             .HasMaxLength(100)
