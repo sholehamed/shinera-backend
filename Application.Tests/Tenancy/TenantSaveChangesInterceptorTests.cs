@@ -90,7 +90,7 @@ public sealed class TenantSaveChangesInterceptorTests
         var exception = await Assert.ThrowsAsync<TenantAccessException>(
             () => fixture.Db.SaveChangesAsync());
 
-        Assert.Equal("tenant.cross_tenant_write", exception.Code);
+        Assert.Equal("tenant.reassignment_forbidden", exception.Code);
     }
 
     [Fact]
