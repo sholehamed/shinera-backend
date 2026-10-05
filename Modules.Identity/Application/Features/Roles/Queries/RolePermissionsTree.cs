@@ -57,11 +57,15 @@ namespace Modules.System.Identity.Application.Features.Roles.Queries
 
        public async Task<RolePermissionTreeResponseDto> Handle(RolePermissionsTreeQuery request, CancellationToken cancellationToken)
         {
-            var selectedPermissionIds = await _context.RolePermissions
-             .AsNoTracking()
-             .Where(x => x.RoleId == request.RoleId)
-             .Select(x => x.PermissionId)
-             .ToListAsync(cancellationToken);
+            var selectedPermissionIds = await _context.PermissionAssignments
+                .AsNoTracking()
+                .Where(x =>
+                    x.SubjectType == Domain.Entities.PermissionSubjectType.Role &&
+                    x.SubjectId == request.RoleId &&
+                    x.IsActive)
+                .Select(x => x.PermissionId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
 
             var modules = await _context.Modules
                 .AsNoTracking()
