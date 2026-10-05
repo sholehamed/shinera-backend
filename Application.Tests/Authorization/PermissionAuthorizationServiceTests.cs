@@ -141,7 +141,7 @@ public sealed class PermissionAuthorizationServiceTests
 
             await fixture.Db.SaveChangesAsync();
 
-            var decision = await fixture.Service.AuthorizeAsync(
+            var decision = await fixture.Service.HasPermissionAsync(
                 userId,
                 "appointments",
                 "view");
