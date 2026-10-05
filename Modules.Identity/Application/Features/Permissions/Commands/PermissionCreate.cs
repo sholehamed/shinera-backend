@@ -43,6 +43,7 @@ namespace Modules.System.Identity.Application.Features.Permissions.Commands
         {
 
             Permission entity = _mapper.Map<Permission>(command);
+            entity.SetKey(command.Code);
             await _context.Permissions.AddAsync(entity);
             await _context.SaveChangesAsync(cancellationToken);
             return entity.Id;
