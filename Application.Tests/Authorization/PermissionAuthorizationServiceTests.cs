@@ -101,6 +101,89 @@ public sealed class PermissionAuthorizationServiceTests
     }
 
     [Fact]
+    public async Task FilterBypass_DoesNotPermitCrossTenantGrant()
+    {
+        var tenantA = Guid.NewGuid();
+        var tenantB = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        await using var fixture = await CreateFixtureAsync(
+            tenantA,
+            userId,
+            createMembership: false);
+
+        Guid permissionId;
+
+        using (fixture.TenantContext.DisableFilter())
+        {
+            fixture.Db.Tenants.Add(new Tenant(
+                tenantB,
+                null,
+                "Tenant B",
+                $"tenant-{tenantB:N}",
+                "tenant-b.example.test"));
+
+            fixture.Db.TenantMemberships.Add(
+                new TenantMembership(tenantB, userId));
+
+            permissionId = await fixture.SeedPermissionAsync(
+                "appointments",
+                "view");
+
+            fixture.Db.PermissionAssignments.Add(
+                new PermissionAssignment(
+                    tenantB,
+                    permissionId,
+                    PermissionSubjectType.User,
+                    userId,
+                    PermissionScopeType.Tenant));
+
+            await fixture.Db.SaveChangesAsync();
+
+            var decision = await fixture.Service.AuthorizeAsync(
+                userId,
+                "appointments",
+                "view");
+
+            Assert.False(decision.IsAllowed);
+            Assert.Equal(
+                PermissionDecisionCode.TenantMembershipRequired,
+                decision.Code);
+        }
+    }
+
+    [Fact]
+    public async Task EffectivePermissions_ReturnKeyAndAssignmentScope()
+    {
+        var tenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        await using var fixture = await CreateFixtureAsync(tenantId, userId);
+        var permissionId = await fixture.SeedPermissionAsync(
+            "customers",
+            "view");
+
+        fixture.Db.PermissionAssignments.Add(
+            new PermissionAssignment(
+                tenantId,
+                permissionId,
+                PermissionSubjectType.User,
+                userId,
+                PermissionScopeType.Own));
+
+        await fixture.Db.SaveChangesAsync();
+
+        var permissions =
+            await fixture.Service.GetEffectivePermissionsAsync(userId);
+
+        var permission = Assert.Single(permissions);
+
+        Assert.Equal("customers.view", permission.Key);
+        Assert.Equal("Own", permission.Scope);
+        Assert.Null(permission.ScopeReferenceId);
+    }
+
+    [Fact]
     public async Task OwnScope_AllowsOnlyOwnedResource()
     {
         var tenantId = Guid.NewGuid();
