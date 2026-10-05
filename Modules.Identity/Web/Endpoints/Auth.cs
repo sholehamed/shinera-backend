@@ -125,7 +125,7 @@ public class Auth : EndpointGroupBase
     public async Task<IResult> Login(HttpContext httpContext, CaptchaService captchaService,
 IIdentityDbContext db,
 IPasswordHasher<User> passwordHasher,
-System.TimeProvider timeProvider,
+global::System.TimeProvider timeProvider,
 CancellationToken cancellationToken)
     {
 
