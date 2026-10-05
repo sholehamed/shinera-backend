@@ -119,7 +119,8 @@ public sealed class PermissionAuthorizationService(
             Guid userId,
             CancellationToken cancellationToken = default)
     {
-        if (!tenantContext.ActiveTenantId.HasValue)
+        var tenantId = tenantContext.ActiveTenantId;
+        if (!tenantId.HasValue)
             return [];
 
         var membershipExists = await dbContext.TenantMemberships
