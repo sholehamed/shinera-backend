@@ -203,34 +203,22 @@ CancellationToken cancellationToken)
                 }));
         }
 
-        var user = await db.Users
-            .FirstOrDefaultAsync(x =>
-                x.NormalizedUserName == normalizedUserName &&
-                x.IsActive, cancellationToken);
-
-        if (user is null)
-        {
-            return Results.Forbid(
-                authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
-                properties: new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Invalid tenant or credentials."
-                }));
-        }
-
         // Transitional password-grant path only.
-        // User identity is global; workspace access is established by membership.
-        var hasMembership = await db.TenantMemberships
+        // Identity is global, while the tenant selector is validated through membership.
+        // Querying through the membership also preserves legacy tenant-local usernames
+        // until M0.1.5 defines the final global login identifier.
+        var user = await db.TenantMemberships
             .IgnoreQueryFilters(["tenant"])
             .AsNoTracking()
-            .AnyAsync(x =>
-                x.UserId == user.Id &&
+            .Where(x =>
                 x.TenantId == tenant.Id &&
-                x.IsActive,
-                cancellationToken);
+                x.IsActive &&
+                x.User.IsActive &&
+                x.User.NormalizedUserName == normalizedUserName)
+            .Select(x => x.User)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (!hasMembership)
+        if (user is null)
         {
             return Results.Forbid(
                 authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
