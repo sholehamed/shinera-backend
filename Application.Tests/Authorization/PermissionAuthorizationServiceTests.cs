@@ -377,12 +377,19 @@ public sealed class PermissionAuthorizationServiceTests
                 $"tenant-{tenantId:N}",
                 "example.test"));
 
-            db.Users.Add(new User(
+            var user = new User(
                 userId,
                 $"user-{userId:N}",
                 $"{userId:N}@example.test",
                 "Test",
-                "User"));
+                "User")
+            {
+                PasswordHash = "test-password-hash",
+                SecurityStamp = Guid.NewGuid().ToString("N"),
+                ConcurrencyStamp = Guid.NewGuid().ToString("N")
+            };
+
+            db.Users.Add(user);
 
             if (createMembership)
             {
