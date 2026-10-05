@@ -286,44 +286,51 @@ public partial class AuthorizationPermissionAssignments : Migration
                 [LastModifiedAt],
                 [LastModifiedByIp]
             )
-            SELECT DISTINCT
+            SELECT
                 NEWID(),
-                ug.[TenantId],
-                rp.[PermissionId],
+                legacy.[TenantId],
+                legacy.[PermissionId],
                 2,
-                ug.[UserId],
+                legacy.[UserId],
                 1,
                 NULL,
                 CAST(1 AS bit),
-                ug.[CreatedBy],
-                ug.[CreatedAt],
-                ug.[CreatedByIp],
-                ug.[LastModifiedBy],
-                ug.[LastModifiedAt],
-                ug.[LastModifiedByIp]
-            FROM [UserGroups] ug
-            INNER JOIN [Groups] g
-                ON g.[Id] = ug.[GroupId]
-               AND g.[TenantId] = ug.[TenantId]
-            INNER JOIN [GroupRoles] gr
-                ON gr.[GroupId] = ug.[GroupId]
-               AND gr.[TenantId] = ug.[TenantId]
-            INNER JOIN [RolePermissions] rp
-                ON rp.[RoleId] = gr.[RoleId]
-               AND rp.[TenantId] = ug.[TenantId]
-            WHERE g.[IsActive] = 1
-              AND gr.[IsDeleted] = 0
-              AND NOT EXISTS
-              (
-                  SELECT 1
-                  FROM [PermissionAssignments] pa
-                  WHERE pa.[TenantId] = ug.[TenantId]
-                    AND pa.[PermissionId] = rp.[PermissionId]
-                    AND pa.[SubjectType] = 2
-                    AND pa.[SubjectId] = ug.[UserId]
-                    AND pa.[ScopeType] = 1
-                    AND pa.[ScopeReferenceId] IS NULL
-              );
+                CAST('00000000-0000-0000-0000-000000000000' AS uniqueidentifier),
+                TODATETIMEOFFSET(SYSUTCDATETIME(), '+00:00'),
+                NULL,
+                NULL,
+                NULL,
+                NULL
+            FROM
+            (
+                SELECT DISTINCT
+                    ug.[TenantId],
+                    rp.[PermissionId],
+                    ug.[UserId]
+                FROM [UserGroups] ug
+                INNER JOIN [Groups] g
+                    ON g.[Id] = ug.[GroupId]
+                   AND g.[TenantId] = ug.[TenantId]
+                INNER JOIN [GroupRoles] gr
+                    ON gr.[GroupId] = ug.[GroupId]
+                   AND gr.[TenantId] = ug.[TenantId]
+                INNER JOIN [RolePermissions] rp
+                    ON rp.[RoleId] = gr.[RoleId]
+                   AND rp.[TenantId] = ug.[TenantId]
+                WHERE g.[IsActive] = 1
+                  AND gr.[IsDeleted] = 0
+            ) legacy
+            WHERE NOT EXISTS
+            (
+                SELECT 1
+                FROM [PermissionAssignments] pa
+                WHERE pa.[TenantId] = legacy.[TenantId]
+                  AND pa.[PermissionId] = legacy.[PermissionId]
+                  AND pa.[SubjectType] = 2
+                  AND pa.[SubjectId] = legacy.[UserId]
+                  AND pa.[ScopeType] = 1
+                  AND pa.[ScopeReferenceId] IS NULL
+            );
             """);
     }
 
