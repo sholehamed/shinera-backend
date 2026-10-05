@@ -20,7 +20,7 @@ public sealed class PermissionAuthorizationHandler(
         if (!Guid.TryParse(subject, out var userId))
             return;
 
-        var decision = await permissionAuthorizationService.AuthorizeAsync(
+        var decision = await permissionAuthorizationService.HasPermissionAsync(
             userId,
             requirement.Resource,
             requirement.Action);
