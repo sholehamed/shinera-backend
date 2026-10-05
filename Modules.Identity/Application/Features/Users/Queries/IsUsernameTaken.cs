@@ -1,4 +1,5 @@
 ﻿using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Features.Users;
 
 namespace Modules.System.Identity.Application.Features.Users.Queries
 {
@@ -12,7 +13,7 @@ namespace Modules.System.Identity.Application.Features.Users.Queries
         public async Task<bool> Handle(IsUsernameTakenQuery request, CancellationToken cancellationToken)
         {
 
-            var res = await context.Users.AsNoTracking().AnyAsync(x => (request.userId==Guid.Empty||x.Id!=request.userId)&& x.NormalizedUserName == request.username.Trim().ToUpperInvariant());
+            var res = await context.CurrentTenantUsers().AsNoTracking().AnyAsync(x => (request.userId==Guid.Empty||x.Id!=request.userId)&& x.NormalizedUserName == request.username.Trim().ToUpperInvariant());
                 
             return res;
         }
