@@ -125,6 +125,7 @@ public class Auth : EndpointGroupBase
     public async Task<IResult> Login(HttpContext httpContext, CaptchaService captchaService,
 IIdentityDbContext db,
 IPasswordHasher<User> passwordHasher,
+System.TimeProvider timeProvider,
 CancellationToken cancellationToken)
     {
 
@@ -202,9 +203,8 @@ CancellationToken cancellationToken)
                 }));
         }
 
-        var user = await db.Users.IgnoreQueryFilters(["tenant"])
+        var user = await db.Users
             .FirstOrDefaultAsync(x =>
-                x.TenantId == tenant.Id &&
                 x.NormalizedUserName == normalizedUserName &&
                 x.IsActive, cancellationToken);
 
@@ -219,7 +219,29 @@ CancellationToken cancellationToken)
                 }));
         }
 
-        if (user.IsLockedOut && user.LockoutEndUtc.HasValue && user.LockoutEndUtc.Value > DateTime.UtcNow)
+        // Transitional password-grant path only.
+        // User identity is global; workspace access is established by membership.
+        var hasMembership = await db.TenantMemberships
+            .IgnoreQueryFilters(["tenant"])
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.UserId == user.Id &&
+                x.TenantId == tenant.Id &&
+                x.IsActive,
+                cancellationToken);
+
+        if (!hasMembership)
+        {
+            return Results.Forbid(
+                authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
+                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Invalid tenant or credentials."
+                }));
+        }
+
+        if (user.IsLockedOut && user.LockoutEndUtc.HasValue && user.LockoutEndUtc.Value > timeProvider.GetUtcNow().UtcDateTime)
         {
             return Results.Forbid(
                 authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
@@ -238,10 +260,9 @@ CancellationToken cancellationToken)
             if (user.AccessFailedCount >= 5)
             {
                 user.IsLockedOut = true;
-                user.LockoutEndUtc = DateTime.UtcNow.AddMinutes(15);
+                user.LockoutEndUtc = timeProvider.GetUtcNow().UtcDateTime.AddMinutes(15);
             }
 
-            user.LastModifiedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
 
             return Results.Forbid(
@@ -258,23 +279,25 @@ CancellationToken cancellationToken)
             user.AccessFailedCount = 0;
             user.IsLockedOut = false;
             user.LockoutEndUtc = null;
-            user.LastModifiedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
         }
 
         // ۱. استخراج تمامی دسترسی‌های معتبر کاربر (مستقیم + نقش‌های مستقیم + نقش‌های گروه‌ها)
         var permissions = await db.UserPermissions
+            .IgnoreQueryFilters(["tenant"])
             .Where(x => x.TenantId == tenant.Id && x.UserId == user.Id && x.IsGranted)
             .Select(x => x.Permission.Name)
             .Union(
                 // دسترسی‌های ناشی از نقش‌های مستقیم کاربر
                 db.UserRoles
+                    .IgnoreQueryFilters(["tenant"])
                     .Where(x => x.TenantId == tenant.Id && x.UserId == user.Id)
                     .SelectMany(x => x.Role.RolePermissions.Select(rp => rp.Permission.Name))
             )
             .Union(
                 // دسترسی‌های ناشی از نقش‌های انتساب‌داده‌شده به گروه‌های کاربر
                 db.UserGroups
+                    .IgnoreQueryFilters(["tenant"])
                     .Where(x => x.TenantId == tenant.Id && x.UserId == user.Id)
                     .SelectMany(x => x.Group.GroupRoles
                         .SelectMany(gr => gr.Role.RolePermissions.Select(rp => rp.Permission.Name)))
@@ -284,11 +307,13 @@ CancellationToken cancellationToken)
 
         // ۲. استخراج تمامی نقش‌های کاربر (نقش‌های مستقیم + نقش‌های به ارث رسیده از گروه‌ها)
         var roles = await db.UserRoles
+            .IgnoreQueryFilters(["tenant"])
             .Where(x => x.TenantId == tenant.Id && x.UserId == user.Id)
             .Select(x => x.Role.Name)
             .Union(
                 // نقش‌هایی که کاربر از طریق عضویت در گروه‌ها به دست آورده است
                 db.UserGroups
+                    .IgnoreQueryFilters(["tenant"])
                     .Where(x => x.TenantId == tenant.Id && x.UserId == user.Id)
                     .SelectMany(x => x.Group.GroupRoles.Select(gr => gr.Role.Name))
             )
