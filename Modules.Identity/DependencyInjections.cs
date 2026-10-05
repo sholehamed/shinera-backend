@@ -2,6 +2,7 @@ using Application.SharedKernel;
 using Infrastructure.SharedKernel;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -81,6 +82,9 @@ public static class DependencyInjections
             provider => provider.GetRequiredService<IdentityDbContext>());
         services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+        services.AddSingleton<
+            IAuthorizationMiddlewareResultHandler,
+            PermissionAuthorizationMiddlewareResultHandler>();
 
         services.AddOpenIddict()
             .AddCore(options =>
