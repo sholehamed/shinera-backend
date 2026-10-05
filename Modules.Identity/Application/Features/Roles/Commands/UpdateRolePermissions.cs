@@ -7,8 +7,17 @@ namespace Modules.System.Identity.Application.Features.Roles.Commands;
 public sealed class UpdateRolePermissionsCommand : ICommand
 {
     public Guid? RoleId { get; set; }
+
+    // Legacy compatibility. Entries here are treated as Tenant-scoped.
     public List<Guid> PermissionIds { get; set; } = [];
+
+    public List<RolePermissionAssignmentInput> Assignments { get; set; } = [];
 }
+
+public sealed record RolePermissionAssignmentInput(
+    Guid PermissionId,
+    PermissionScopeType ScopeType,
+    Guid? ScopeReferenceId = null);
 
 public sealed class UpdateRolePermissionsCommandHandler(
     IIdentityDbContext context,
@@ -27,11 +36,6 @@ public sealed class UpdateRolePermissionsCommandHandler(
         var roleId = request.RoleId
             ?? throw new ServiceExeption("Role is required.");
 
-        var permissionIds = request.PermissionIds
-            .Where(id => id != Guid.Empty)
-            .Distinct()
-            .ToList();
-
         var roleExists = await context.Roles
             .AsNoTracking()
             .AnyAsync(
@@ -40,6 +44,41 @@ public sealed class UpdateRolePermissionsCommandHandler(
 
         if (!roleExists)
             throw new ServiceExeption("Role not found.");
+
+        var requestedAssignments =
+            request.Assignments.Count > 0
+                ? request.Assignments
+                : request.PermissionIds
+                    .Where(id => id != Guid.Empty)
+                    .Distinct()
+                    .Select(id => new RolePermissionAssignmentInput(
+                        id,
+                        PermissionScopeType.Tenant))
+                    .ToList();
+
+        if (requestedAssignments.Any(x =>
+                x.ScopeType == PermissionScopeType.Child))
+        {
+            throw new ServiceExeption(
+                "Child permission scope is reserved and is not supported.");
+        }
+
+        var normalizedAssignments = requestedAssignments
+            .Where(x => x.PermissionId != Guid.Empty)
+            .Select(x => x with
+            {
+                ScopeReferenceId =
+                    x.ScopeType == PermissionScopeType.Branch
+                        ? x.ScopeReferenceId
+                        : null
+            })
+            .Distinct()
+            .ToList();
+
+        var permissionIds = normalizedAssignments
+            .Select(x => x.PermissionId)
+            .Distinct()
+            .ToList();
 
         var validPermissionIds = await context.Permissions
             .AsNoTracking()
@@ -62,13 +101,14 @@ public sealed class UpdateRolePermissionsCommandHandler(
 
         context.PermissionAssignments.RemoveRange(existingAssignments);
 
-        var assignments = validPermissionIds.Select(permissionId =>
+        var assignments = normalizedAssignments.Select(item =>
             new PermissionAssignment(
                 tenantId,
-                permissionId,
+                item.PermissionId,
                 PermissionSubjectType.Role,
                 roleId,
-                PermissionScopeType.Tenant));
+                item.ScopeType,
+                item.ScopeReferenceId));
 
         await context.PermissionAssignments.AddRangeAsync(
             assignments,
