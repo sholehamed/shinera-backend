@@ -1,17 +1,12 @@
-﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.IdentityModel.Tokens;
 using Modules.System.Identity.Application.Abstractions;
 using Modules.System.Identity.Domain.Entities;
+using Modules.System.Identity.Web.Authentication;
 using Modules.System.Identity.Web.Util;
 using OpenIddict.Abstractions;
-using OpenIddict.Server.AspNetCore;
 using System.Security.Claims;
 using Web.SharedKernel.Attributes;
-
 
 namespace Modules.System.Identity.Web.Endpoints;
 
@@ -20,54 +15,212 @@ public class Auth : EndpointGroupBase
     public override void Map(WebApplication app)
     {
         app.MapGroup(this)
-
-            .MapPost(Login, "login", configure: x => x.AllowAnonymous())
-            .MapGet(NewCaptcha, "/captcha/new", configure: x => x.AllowAnonymous())
-            .MapGet(GetCaptchaImage, "/captcha/image", configure: x => x.AllowAnonymous())
-            .MapGet(GetUserInfo, "/userinfo", configure: x => x.RequireAuthorization())
-            .MapMethods(Logout, ["GET", "POST"], "logout");
-        ;
+            .MapPost(
+                Login,
+                "session/login",
+                configure: x => x.AllowAnonymous())
+            .MapPost(
+                LogoutSession,
+                "session/logout",
+                configure: x => x.AllowAnonymous())
+            .MapGet(
+                NewCaptcha,
+                "captcha/new",
+                configure: x => x.AllowAnonymous())
+            .MapGet(
+                GetCaptchaImage,
+                "captcha/image",
+                configure: x => x.AllowAnonymous())
+            .MapGet(
+                GetCurrentUser,
+                "me",
+                configure: x => x.RequireAuthorization());
     }
-    public async Task<IResult> GetUserInfo(
+
+    public async Task<IResult> Login(
+        InteractiveLoginRequest request,
+        HttpContext httpContext,
+        CaptchaService captchaService,
         IIdentityDbContext dbContext,
-   HttpContext context)
+        IPasswordHasher<User> passwordHasher,
+        global::System.TimeProvider timeProvider,
+        CancellationToken cancellationToken)
     {
+        if (!captchaService.Validate(request.CaptchaToken, request.CaptchaCode))
+        {
+            return Results.BadRequest(new
+            {
+                error = "authentication.captcha_invalid",
+                message = "Captcha is invalid or expired."
+            });
+        }
 
+        var identifier = request.Identifier?.Trim().ToUpperInvariant();
 
-        var result = await context.AuthenticateAsync(
-         OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        if (string.IsNullOrWhiteSpace(identifier) ||
+            string.IsNullOrWhiteSpace(request.Password))
+        {
+            return InvalidCredentials();
+        }
 
-        if (!result.Succeeded)
+        var candidates = await dbContext.Users
+            .Where(user =>
+                user.IsActive &&
+                (user.NormalizedEmail == identifier ||
+                 user.NormalizedUserName == identifier))
+            .Take(2)
+            .ToListAsync(cancellationToken);
+
+        // User authentication is global. An ambiguous legacy username must not
+        // be resolved by tenant context; the caller can use the unique email.
+        if (candidates.Count != 1)
+        {
+            return InvalidCredentials();
+        }
+
+        var user = candidates[0];
+        var now = timeProvider.GetUtcNow();
+
+        if (user.IsLockedOut &&
+            user.LockoutEndUtc.HasValue &&
+            user.LockoutEndUtc.Value > now.UtcDateTime)
+        {
+            return InvalidCredentials();
+        }
+
+        var verification = passwordHasher.VerifyHashedPassword(
+            user,
+            user.PasswordHash,
+            request.Password);
+
+        if (verification == PasswordVerificationResult.Failed)
+        {
+            user.AccessFailedCount++;
+
+            if (user.AccessFailedCount >= 5)
+            {
+                user.IsLockedOut = true;
+                user.LockoutEndUtc = now.AddMinutes(15).UtcDateTime;
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return InvalidCredentials();
+        }
+
+        if (user.AccessFailedCount > 0 || user.IsLockedOut)
+        {
+            user.AccessFailedCount = 0;
+            user.IsLockedOut = false;
+            user.LockoutEndUtc = null;
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        var identity = new ClaimsIdentity(
+            InteractiveAuthenticationDefaults.Scheme,
+            OpenIddictConstants.Claims.Name,
+            OpenIddictConstants.Claims.Role);
+
+        identity.AddClaim(new Claim(
+            OpenIddictConstants.Claims.Subject,
+            user.Id.ToString()));
+
+        identity.AddClaim(new Claim(
+            OpenIddictConstants.Claims.Name,
+            user.UserName));
+
+        identity.AddClaim(new Claim(
+            OpenIddictConstants.Claims.Email,
+            user.Email));
+
+        await httpContext.SignInAsync(
+            InteractiveAuthenticationDefaults.Scheme,
+            new ClaimsPrincipal(identity),
+            new AuthenticationProperties
+            {
+                IsPersistent = false,
+                AllowRefresh = true,
+                ExpiresUtc = now.AddHours(8)
+            });
+
+        return Results.Ok(new
+        {
+            success = true,
+            returnUrl = NormalizeReturnUrl(request.ReturnUrl)
+        });
+    }
+
+    public async Task<IResult> LogoutSession(HttpContext httpContext)
+    {
+        await httpContext.SignOutAsync(
+            InteractiveAuthenticationDefaults.Scheme);
+
+        return Results.NoContent();
+    }
+
+    public async Task<IResult> GetCurrentUser(
+        HttpContext httpContext,
+        IIdentityDbContext dbContext,
+        ITenantContext tenantContext,
+        CancellationToken cancellationToken)
+    {
+        var subject = httpContext.User.FindFirstValue(
+            OpenIddictConstants.Claims.Subject);
+
+        if (!Guid.TryParse(subject, out var userId))
         {
             return Results.Unauthorized();
         }
 
-        var user = result.Principal;
+        var user = await dbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.Id == userId && x.IsActive,
+                cancellationToken);
+
+        if (user is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var memberships = await dbContext.TenantMemberships
+            .IgnoreQueryFilters(["tenant"])
+            .AsNoTracking()
+            .Where(x =>
+                x.UserId == userId &&
+                x.IsActive &&
+                x.Tenant.IsActive)
+            .OrderBy(x => x.Tenant.Name)
+            .Select(x => new
+            {
+                x.TenantId,
+                x.Tenant.Name,
+                x.Tenant.Slug
+            })
+            .ToListAsync(cancellationToken);
 
         return Results.Ok(new
         {
-            sub = user.GetClaim(OpenIddictConstants.Claims.Subject),
-            username = user.GetClaim(OpenIddictConstants.Claims.Username),
-            given_name = user.GetClaim(OpenIddictConstants.Claims.GivenName),
-            picture = user.GetClaim(OpenIddictConstants.Claims.Picture),
-            tenant = user.GetClaim("tenant"),
-            tenant_id = user.GetClaim("tenant_id")
+            user = new
+            {
+                user.Id,
+                user.UserName,
+                user.Email,
+                user.FirstName,
+                user.LastName,
+                user.ImageId
+            },
+            memberships,
+            activeTenantId = tenantContext.ActiveTenantId
         });
     }
+
     [Resouce("", "newcaptcha")]
-    public IResult NewCaptcha(
-    CaptchaService captchaService,
-    LinkGenerator linkGenerator,
-    HttpContext httpContext)
+    public IResult NewCaptcha(CaptchaService captchaService)
     {
         var challenge = captchaService.CreateChallenge();
-
-        var imageUrl = $"/System/Auth/captcha/image?token={Uri.EscapeDataString(challenge.Token)}";
-
-        if (string.IsNullOrWhiteSpace(imageUrl))
-        {
-            return Results.Problem("Captcha image route was not found.");
-        }
+        var imageUrl =
+            $"/System/Auth/captcha/image?token={Uri.EscapeDataString(challenge.Token)}";
 
         return Results.Ok(new
         {
@@ -75,10 +228,11 @@ public class Auth : EndpointGroupBase
             imageUrl
         });
     }
+
     [Resouce("", "newcaptcha")]
     public IResult GetCaptchaImage(
-    string token,
-    CaptchaService captchaService)
+        string token,
+        CaptchaService captchaService)
     {
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -96,275 +250,35 @@ public class Auth : EndpointGroupBase
         }
     }
 
-    [Resouce("", "logout")]
-    public async Task<IResult> Logout(HttpContext httpContext)
+    private static IResult InvalidCredentials()
     {
-        var request = httpContext.GetOpenIddictServerRequest();
-        if (request is null)
-        {
-            return Results.BadRequest(new
+        return Results.Json(
+            new
             {
-                error = OpenIddictConstants.Errors.InvalidRequest,
-                error_description = "OpenIddict request is missing."
-            });
-        }
-
-        if (httpContext.User?.Identity?.IsAuthenticated == true)
-        {
-            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        }
-
-        return Results.SignOut(
-            authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
-            properties: new AuthenticationProperties
-            {
-                RedirectUri = request.PostLogoutRedirectUri ?? "/"
-            });
-    }
-    [Resouce("", "login")]
-    public async Task<IResult> Login(HttpContext httpContext, CaptchaService captchaService,
-IIdentityDbContext db,
-IPasswordHasher<User> passwordHasher,
-global::System.TimeProvider timeProvider,
-CancellationToken cancellationToken)
-    {
-
-        var request = httpContext.GetOpenIddictServerRequest();
-
-        if (request is null)
-            return Results.BadRequest(new
-            {
-                error = OpenIddictConstants.Errors.InvalidRequest,
-                error_description = "OpenIddict request is missing."
-            });
-
-        var token = httpContext.Request.Form["captchaid"];
-        var input = httpContext.Request.Form["userEnteredCaptchaCode"];
-        if (request.IsRefreshTokenGrantType())
-        {
-            var result = await httpContext.AuthenticateAsync(
-                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-
-            if (!result.Succeeded)
-            {
-                return Results.Forbid(
-                    authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme]);
-            }
-
-            return Results.SignIn(result.Principal!,
-                authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-        }
-
-        var t = captchaService.Validate(token, input);
-      
-        if (!request.IsPasswordGrantType())
-        {
-            return Results.BadRequest(new
-            {
-                error = OpenIddictConstants.Errors.UnsupportedGrantType,
-                error_description = "The specified grant type is not supported."
-            });
-        }
-
-        var tenantSlug = request.GetParameter("tenant")?.ToString();
-        if (string.IsNullOrWhiteSpace(tenantSlug))
-        {
-            return Results.BadRequest(new
-            {
-                error = OpenIddictConstants.Errors.InvalidRequest,
-                error_description = "The 'tenant' parameter is required."
-            });
-        }
-
-        var tenant = await db.Tenants
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Slug == tenantSlug && x.IsActive, cancellationToken);
-
-        if (tenant is null)
-        {
-            return Results.Forbid(
-                authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
-                properties: new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Invalid tenant or credentials."
-                }));
-        }
-
-        var normalizedUserName = request.Username?.Trim().ToUpperInvariant();
-        if (string.IsNullOrWhiteSpace(normalizedUserName) || string.IsNullOrWhiteSpace(request.Password))
-        {
-            return Results.Forbid(
-                authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
-                properties: new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Invalid credentials."
-                }));
-        }
-
-        // Transitional password-grant path only.
-        // Identity is global, while the tenant selector is validated through membership.
-        // Querying through the membership also preserves legacy tenant-local usernames
-        // until M0.1.5 defines the final global login identifier.
-        var user = await db.TenantMemberships
-            .IgnoreQueryFilters(["tenant"])
-            .AsNoTracking()
-            .Where(x =>
-                x.TenantId == tenant.Id &&
-                x.IsActive &&
-                x.User.IsActive &&
-                x.User.NormalizedUserName == normalizedUserName)
-            .Select(x => x.User)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (user is null)
-        {
-            return Results.Forbid(
-                authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
-                properties: new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Invalid tenant or credentials."
-                }));
-        }
-
-        if (user.IsLockedOut && user.LockoutEndUtc.HasValue && user.LockoutEndUtc.Value > timeProvider.GetUtcNow().UtcDateTime)
-        {
-            return Results.Forbid(
-                authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
-                properties: new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "User account is locked."
-                }));
-        }
-        string s = passwordHasher.HashPassword(user, request.Password);
-        var passwordVerification = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
-        if (passwordVerification == PasswordVerificationResult.Failed)
-        {
-            user.AccessFailedCount++;
-
-            if (user.AccessFailedCount >= 5)
-            {
-                user.IsLockedOut = true;
-                user.LockoutEndUtc = timeProvider.GetUtcNow().UtcDateTime.AddMinutes(15);
-            }
-
-            await db.SaveChangesAsync(cancellationToken);
-
-            return Results.Forbid(
-                authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
-                properties: new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Invalid tenant or credentials."
-                }));
-        }
-
-        if (user.AccessFailedCount > 0 || user.IsLockedOut)
-        {
-            user.AccessFailedCount = 0;
-            user.IsLockedOut = false;
-            user.LockoutEndUtc = null;
-            await db.SaveChangesAsync(cancellationToken);
-        }
-
-        // ۱. استخراج تمامی دسترسی‌های معتبر کاربر (مستقیم + نقش‌های مستقیم + نقش‌های گروه‌ها)
-        var permissions = await db.UserPermissions
-            .IgnoreQueryFilters(["tenant"])
-            .Where(x => x.TenantId == tenant.Id && x.UserId == user.Id && x.IsGranted)
-            .Select(x => x.Permission.Name)
-            .Union(
-                // دسترسی‌های ناشی از نقش‌های مستقیم کاربر
-                db.UserRoles
-                    .IgnoreQueryFilters(["tenant"])
-                    .Where(x => x.TenantId == tenant.Id && x.UserId == user.Id)
-                    .SelectMany(x => x.Role.RolePermissions.Select(rp => rp.Permission.Name))
-            )
-            .Union(
-                // دسترسی‌های ناشی از نقش‌های انتساب‌داده‌شده به گروه‌های کاربر
-                db.UserGroups
-                    .IgnoreQueryFilters(["tenant"])
-                    .Where(x => x.TenantId == tenant.Id && x.UserId == user.Id)
-                    .SelectMany(x => x.Group.GroupRoles
-                        .SelectMany(gr => gr.Role.RolePermissions.Select(rp => rp.Permission.Name)))
-            )
-            .Distinct()
-            .ToListAsync(cancellationToken);
-
-        // ۲. استخراج تمامی نقش‌های کاربر (نقش‌های مستقیم + نقش‌های به ارث رسیده از گروه‌ها)
-        var roles = await db.UserRoles
-            .IgnoreQueryFilters(["tenant"])
-            .Where(x => x.TenantId == tenant.Id && x.UserId == user.Id)
-            .Select(x => x.Role.Name)
-            .Union(
-                // نقش‌هایی که کاربر از طریق عضویت در گروه‌ها به دست آورده است
-                db.UserGroups
-                    .IgnoreQueryFilters(["tenant"])
-                    .Where(x => x.TenantId == tenant.Id && x.UserId == user.Id)
-                    .SelectMany(x => x.Group.GroupRoles.Select(gr => gr.Role.Name))
-            )
-            .Distinct()
-            .ToListAsync(cancellationToken);
-
-
-        var claims = new List<Claim>
-    {
-        new(OpenIddictConstants.Claims.Subject, user.Id.ToString()),
-        new(OpenIddictConstants.Claims.Username, user.UserName),
-        new(OpenIddictConstants.Claims.Email, user.Email),
-        new(OpenIddictConstants.Claims.Picture, user.ImageId.ToString()!),
-        new(OpenIddictConstants.Claims.GivenName, $"{user.FirstName} {user.LastName}"),
-        new("tenant_id", tenant.Id.ToString()),
-        new("tenant", tenant.Slug)
-    };
-
-        claims.AddRange(roles.Select(role => new Claim(OpenIddictConstants.Claims.Role, role)));
-        claims.AddRange(permissions.Select(permission => new Claim("permission", permission)));
-
-        var identity = new ClaimsIdentity(
-            claims,
-            TokenValidationParameters.DefaultAuthenticationType,
-            OpenIddictConstants.Claims.Name,
-            OpenIddictConstants.Claims.Role);
-
-        var principal = new ClaimsPrincipal(identity);
-
-        var allowedScopes = request.GetScopes().Intersect(new[]
-        {
-        OpenIddictConstants.Scopes.OpenId,
-    OpenIddictConstants.Scopes.Profile,
-    OpenIddictConstants.Scopes.Email,
-    OpenIddictConstants.Scopes.OfflineAccess,
-    "api"
-    });
-
-        principal.SetScopes(allowedScopes);
-        principal.SetResources("resource_server");
-
-        foreach (var claim in principal.Claims)
-        {
-            switch (claim.Type)
-            {
-                case OpenIddictConstants.Claims.Subject:
-                case OpenIddictConstants.Claims.Username:
-                case OpenIddictConstants.Claims.Email:
-                case OpenIddictConstants.Claims.Picture:
-                case OpenIddictConstants.Claims.GivenName:
-                case OpenIddictConstants.Claims.Role:
-                case "tenant_id":
-                case "tenant":
-                case "permission":
-                    claim.SetDestinations(OpenIddictConstants.Destinations.AccessToken);
-                    break;
-            }
-        }
-
-        return Results.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-
+                error = "authentication.invalid_credentials",
+                message = "Invalid credentials."
+            },
+            statusCode: StatusCodes.Status401Unauthorized);
     }
 
+    private static string? NormalizeReturnUrl(string? returnUrl)
+    {
+        if (string.IsNullOrWhiteSpace(returnUrl))
+            return null;
 
+        if (!returnUrl.StartsWith('/') ||
+            returnUrl.StartsWith("//", StringComparison.Ordinal))
+        {
+            return null;
+        }
 
+        return returnUrl;
+    }
 }
+
+public sealed record InteractiveLoginRequest(
+    string Identifier,
+    string Password,
+    string CaptchaToken,
+    string CaptchaCode,
+    string? ReturnUrl);

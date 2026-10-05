@@ -13,6 +13,7 @@ using Modules.System.Identity.Infrastructure.Persistence;
 using Modules.System.Identity.Infrastructure.Persistence.Contexts;
 using Modules.System.Identity.Infrastructure.Persistence.Interceptors;
 using Modules.System.Identity.Web.Authentication;
+using Modules.System.Identity.Web.Endpoints;
 using Modules.System.Identity.Web.Middlewares;
 using Modules.System.Identity.Web.Util;
 using OpenIddict.Abstractions;
@@ -127,6 +128,8 @@ public static class DependencyInjections
         app.UseAuthorization();
 
         app.UseMiddleware<TenantResolutionMiddleware>();
+
+        app.MapOpenIddictProtocolEndpoints(configuration);
         app.MapEndpoints($"{configuration["BackendPrefix"]}System");
 
         return app;
