@@ -66,7 +66,6 @@ public sealed class TenantQueryFilterTests
         var context = new TenantContext();
         context.Initialize(
             Guid.NewGuid(),
-            activeTenantId,
             false,
             readableTenantIds,
             [activeTenantId],
