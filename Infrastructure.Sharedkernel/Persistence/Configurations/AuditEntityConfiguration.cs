@@ -1,4 +1,5 @@
 using Domain.SharedKernel.Common;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.SharedKernel.Persistence.Configurations;

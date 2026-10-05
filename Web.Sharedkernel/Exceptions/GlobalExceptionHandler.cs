@@ -23,6 +23,12 @@ public sealed class GlobalExceptionHandler(
                     "One or more validation errors occurred.",
                     validationException.Errors)),
 
+            TenantAccessException tenantException => (
+                StatusCodes.Status403Forbidden,
+                ApiResponse.Fail(
+                    tenantException.Code,
+                    tenantException.Message)),
+
             ForbiddenAccessException => (
                 StatusCodes.Status403Forbidden,
                 ApiResponse.Fail(
