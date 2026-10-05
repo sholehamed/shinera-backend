@@ -41,6 +41,7 @@ public static class OpenIddictProtocolEndpoints
         HttpContext httpContext,
         IIdentityDbContext dbContext,
         IConfiguration configuration,
+        global::System.TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
         var request = httpContext.GetOpenIddictServerRequest();
@@ -76,7 +77,7 @@ public static class OpenIddictProtocolEndpoints
                 x => x.Id == userId && x.IsActive,
                 cancellationToken);
 
-        if (user is null || IsLockedOut(user, global::System.TimeProvider.System.GetUtcNow()))
+        if (user is null || IsLockedOut(user, timeProvider.GetUtcNow()))
         {
             await httpContext.SignOutAsync(InteractiveAuthenticationDefaults.Scheme);
             return RedirectToLogin(httpContext, configuration);
@@ -187,6 +188,10 @@ public static class OpenIddictProtocolEndpoints
         identity.AddClaim(new Claim(
             OpenIddictConstants.Claims.Subject,
             user.Id.ToString()));
+
+        identity.AddClaim(new Claim(
+            OpenIddictConstants.Claims.Name,
+            user.UserName));
 
         identity.AddClaim(new Claim(
             OpenIddictConstants.Claims.Username,
