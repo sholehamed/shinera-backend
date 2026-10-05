@@ -64,13 +64,6 @@ public sealed class TenantSaveChangesInterceptor(
                 continue;
             }
 
-            if (entry.Entity.TenantId != activeTenantId)
-            {
-                throw new TenantAccessException(
-                    "tenant.cross_tenant_write",
-                    "A tenant-owned entity cannot be modified or deleted from another tenant.");
-            }
-
             if (entry.State == EntityState.Modified)
             {
                 var tenantProperty = entry.Property(nameof(IMustHaveTenant.TenantId));
@@ -82,6 +75,13 @@ public sealed class TenantSaveChangesInterceptor(
                         "tenant.reassignment_forbidden",
                         "Tenant ownership cannot be reassigned.");
                 }
+            }
+
+            if (entry.Entity.TenantId != activeTenantId)
+            {
+                throw new TenantAccessException(
+                    "tenant.cross_tenant_write",
+                    "A tenant-owned entity cannot be modified or deleted from another tenant.");
             }
         }
     }
