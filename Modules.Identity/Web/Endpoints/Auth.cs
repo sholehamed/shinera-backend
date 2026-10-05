@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Authorization;
 using Modules.System.Identity.Domain.Entities;
 using Modules.System.Identity.Web.Authentication;
 using Modules.System.Identity.Web.Util;
@@ -162,6 +163,7 @@ public class Auth : EndpointGroupBase
         HttpContext httpContext,
         IIdentityDbContext dbContext,
         ITenantContext tenantContext,
+        IPermissionAuthorizationService permissionAuthorizationService,
         CancellationToken cancellationToken)
     {
         var subject = httpContext.User.FindFirstValue(
@@ -199,6 +201,11 @@ public class Auth : EndpointGroupBase
             })
             .ToListAsync(cancellationToken);
 
+        var permissions =
+            await permissionAuthorizationService.GetEffectivePermissionsAsync(
+                userId,
+                cancellationToken);
+
         return Results.Ok(new
         {
             user = new
@@ -211,7 +218,8 @@ public class Auth : EndpointGroupBase
                 user.ImageId
             },
             memberships,
-            activeTenantId = tenantContext.ActiveTenantId
+            activeTenantId = tenantContext.ActiveTenantId,
+            permissions
         });
     }
 
