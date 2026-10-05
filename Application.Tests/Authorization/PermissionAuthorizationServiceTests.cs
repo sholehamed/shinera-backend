@@ -76,8 +76,16 @@ public sealed class PermissionAuthorizationServiceTests
 
         using (fixture.TenantContext.DisableFilter())
         {
+            fixture.Db.Tenants.Add(new Tenant(
+                tenantB,
+                null,
+                "Tenant B",
+                $"tenant-{tenantB:N}",
+                "tenant-b.example.test"));
+
             fixture.Db.TenantMemberships.Add(
                 new TenantMembership(tenantB, userId));
+
             await fixture.Db.SaveChangesAsync();
         }
 
