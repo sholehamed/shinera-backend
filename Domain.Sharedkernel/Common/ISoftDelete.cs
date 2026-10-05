@@ -1,11 +1,11 @@
-﻿namespace Domain.SharedKernel.Common
+namespace Domain.SharedKernel.Common;
+
+public interface ISoftDelete
 {
-    public interface ISoftDelete
-    {
-        public bool IsDeleted { get; }
-        public Guid? DeletedBy { get;  }
-        public DateTime? DeletedAt { get;  }
-        public string? DeletedByIp { get;  }
-        void Delete(Guid userId, string ip);
-    }
+    bool IsDeleted { get; }
+    Guid? DeletedBy { get; }
+    DateTimeOffset? DeletedAt { get; }
+    string? DeletedByIp { get; }
+
+    void Delete(Guid userId, string? ip, DateTimeOffset timestamp);
 }

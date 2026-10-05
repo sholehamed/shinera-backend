@@ -1,16 +1,19 @@
-﻿using System.Globalization;
+namespace Domain.Sharedkernel.Util;
 
-namespace Domain.Sharedkernel.Util
+[Obsolete("Inject System.TimeProvider. This compatibility shim will be removed after M0.1.")]
+public static class TimeProvider
 {
-    public static class TimeProvider
-    {
-        public static DateTime Now =>DateTime.Now;
-        public static DateTime UtcNow =>DateTime.UtcNow;
-        public static DateTimeOffset UtcNowOffset => new DateTimeOffset(
-    2026, 7, 22,
-    19, 22, 18,
-    TimeSpan.Zero
-);
-        public static DateTimeOffset NowOffset => DateTimeOffset.Now;
-    }
+    public static DateTimeOffset UtcNowOffset =>
+        global::System.TimeProvider.System.GetUtcNow();
+
+    public static DateTime UtcNow =>
+        UtcNowOffset.UtcDateTime;
+
+    [Obsolete("Server-local time is not authoritative. Use UtcNowOffset.")]
+    public static DateTime Now =>
+        UtcNow;
+
+    [Obsolete("Server-local time is not authoritative. Use UtcNowOffset.")]
+    public static DateTimeOffset NowOffset =>
+        UtcNowOffset;
 }

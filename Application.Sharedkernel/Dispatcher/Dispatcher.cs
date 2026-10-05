@@ -1,5 +1,4 @@
 using Application.SharedKernel.Abstractions.Messaging;
-using Application.SharedKernel.Exceptions;
 using Domain.SharedKernel.Common.Events;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -85,6 +84,6 @@ public sealed class Dispatcher(IServiceProvider serviceProvider) : IDispatcher
             .ToArray();
 
         if (failures.Length > 0)
-            throw new ValidationException(failures);
+            throw new Application.SharedKernel.Exceptions.ValidationException(failures);
     }
 }
