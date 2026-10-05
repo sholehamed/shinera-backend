@@ -1,10 +1,12 @@
 using Application.SharedKernel;
 using Infrastructure.SharedKernel;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Authorization;
 using Modules.System.Identity.Application.Features.ApiResources.Services;
 using Modules.System.Identity.Application.Mapping;
 using Modules.System.Identity.Application.Services;
@@ -13,6 +15,7 @@ using Modules.System.Identity.Infrastructure.Persistence;
 using Modules.System.Identity.Infrastructure.Persistence.Contexts;
 using Modules.System.Identity.Infrastructure.Persistence.Interceptors;
 using Modules.System.Identity.Web.Authentication;
+using Modules.System.Identity.Web.Authorization;
 using Modules.System.Identity.Web.Endpoints;
 using Modules.System.Identity.Web.Middlewares;
 using Modules.System.Identity.Web.Util;
@@ -76,8 +79,8 @@ public static class DependencyInjections
         services.AddScoped<CaptchaService>();
         services.AddScoped<IIdentityDbContext>(
             provider => provider.GetRequiredService<IdentityDbContext>());
-        services.AddScoped<IPermissionResolver, RoutePermissionResolver>();
-        services.AddScoped<IPermissionChecker, DbPermissionChecker>();
+        services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
+        services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
         services.AddOpenIddict()
             .AddCore(options =>
