@@ -26,6 +26,29 @@ public sealed class PermissionAuthorizationHandler(
             requirement.Action);
 
         if (decision.IsAllowed)
+        {
             context.Succeed(requirement);
+            return;
+        }
+
+        context.Fail(
+            new AuthorizationFailureReason(
+                this,
+                ToErrorCode(decision.Code)));
     }
+
+    private static string ToErrorCode(PermissionDecisionCode code) =>
+        code switch
+        {
+            PermissionDecisionCode.TenantContextMissing =>
+                "authorization.tenant_denied",
+
+            PermissionDecisionCode.TenantMembershipRequired =>
+                "authorization.tenant_denied",
+
+            PermissionDecisionCode.ScopeDenied =>
+                "authorization.scope_denied",
+
+            _ => "authorization.permission_required"
+        };
 }
