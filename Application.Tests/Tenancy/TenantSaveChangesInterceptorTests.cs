@@ -124,7 +124,6 @@ public sealed class TenantSaveChangesInterceptorTests
         var tenantContext = new TenantContext();
         tenantContext.Initialize(
             Guid.NewGuid(),
-            activeTenantId,
             false,
             [activeTenantId],
             writableTenantIds,
