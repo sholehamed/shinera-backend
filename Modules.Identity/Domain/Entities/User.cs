@@ -1,4 +1,5 @@
 using Domain.SharedKernel.Entities;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Modules.System.Identity.Domain.Entities;
 
@@ -14,6 +15,33 @@ public class User : AuditableEntity
 
     public User(Guid id) : base(id)
     {
+    }
+
+    [Obsolete("M0.1 compatibility constructor for legacy development seed data only.")]
+    public User(
+        Guid legacyTenantId,
+        string userName,
+        string email,
+        string? firstName,
+        string? lastName,
+        bool isActive = true) : base(17)
+    {
+        TenantId = legacyTenantId;
+        SetIdentity(userName, email, firstName, lastName, isActive);
+    }
+
+    [Obsolete("M0.1 compatibility constructor for legacy development seed data only.")]
+    public User(
+        Guid id,
+        Guid legacyTenantId,
+        string userName,
+        string email,
+        string? firstName,
+        string? lastName,
+        bool isActive = true) : base(id)
+    {
+        TenantId = legacyTenantId;
+        SetIdentity(userName, email, firstName, lastName, isActive);
     }
 
     public User(
@@ -38,6 +66,12 @@ public class User : AuditableEntity
     }
 
     public Guid? ImageId { get; set; }
+
+    // Transitional compile-only bridge for legacy seed code.
+    // It is deliberately not persisted and must not be used for workspace authorization.
+    [NotMapped]
+    [Obsolete("User is global. Use TenantMembership.")]
+    public Guid TenantId { get; set; }
 
     public string UserName { get; set; } = default!;
     public string NormalizedUserName { get; set; } = default!;
