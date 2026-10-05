@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Configuration;
 using Modules.System.Identity.Application.Abstractions;
 using Modules.System.Identity.Domain.Entities;
 using Modules.System.Identity.Web.Authentication;
