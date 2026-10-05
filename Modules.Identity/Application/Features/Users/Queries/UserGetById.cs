@@ -1,4 +1,5 @@
 ﻿using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Features.Users;
 using Modules.System.Identity.Domain.Entities;
 
 namespace Modules.System.Identity.Application.Features.Users.Queries
@@ -28,7 +29,7 @@ namespace Modules.System.Identity.Application.Features.Users.Queries
         public async Task<UserGetByIdDto> Handle(UserGetByIdQuery request, CancellationToken cancellationToken)
         {
 
-            var res = await context.Users.AsNoTracking()
+            var res = await context.CurrentTenantUsers().AsNoTracking()
                 .Where(x => x.Id == request.Id)
                 .ProjectTo<UserGetByIdDto>(mapper.ConfigurationProvider).FirstOrDefaultAsync(cancellationToken) ?? throw new Exception("not found");
             return res;
