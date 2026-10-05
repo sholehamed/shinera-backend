@@ -48,6 +48,11 @@ internal sealed class PermissionAssignmentConfiguration
             .HasForeignKey(x => x.PermissionId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(x => x.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         base.Configure(builder);
     }
 }
