@@ -84,10 +84,27 @@ public sealed class TenantQueryFilterTests
             .UseSqlite(connection)
             .Options;
 
-        var db = new IdentityDbContext(options, tenantContext);
+        var db = new TenantQueryTestDbContext(options, tenantContext);
         await db.Database.EnsureCreatedAsync();
 
         return new Fixture(connection, db);
+    }
+
+    private sealed class TenantQueryTestDbContext(
+        DbContextOptions<IdentityDbContext> options,
+        TenantContext tenantContext)
+        : IdentityDbContext(options, tenantContext)
+    {
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            // SQL Server generates rowversion values. SQLite does not.
+            // These tests exercise tenant filtering, not SQL Server rowversion semantics.
+            builder.Entity<Role>()
+                .Property(x => x.RowVersion)
+                .ValueGeneratedNever();
+        }
     }
 
     private sealed class Fixture(
