@@ -150,6 +150,7 @@ public static class DependencyInjections
                     options.SlidingExpiration = true;
                 });
 
+        services.AddScoped<SystemPermissionCatalogSeedContributor>();
         services.AddScoped<OpenIddictWebClientSeedContributor>();
         services.AddScoped<ISeedContributor>(
             provider => provider.GetRequiredService<OpenIddictWebClientSeedContributor>());
