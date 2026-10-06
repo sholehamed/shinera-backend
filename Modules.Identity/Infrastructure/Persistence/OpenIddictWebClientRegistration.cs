@@ -4,10 +4,8 @@ using OpenIddict.Abstractions;
 
 namespace Modules.System.Identity.Infrastructure.Persistence;
 
-public sealed class OpenIddictWebClientSeedContributor : ISeedContributor
+public sealed class OpenIddictWebClientSeedContributor
 {
-    public int Order => 5;
-
     public async Task SeedAsync(IServiceProvider serviceProvider)
     {
         var configuration =
