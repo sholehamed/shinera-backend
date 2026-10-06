@@ -9,7 +9,8 @@ internal sealed class UserConfigurations : AuditEntityConfiguration<User>
     public override void Configure(EntityTypeBuilder<User> builder)
     {
         builder.HasIndex(x => x.NormalizedUserName);
-        builder.HasIndex(x => x.NormalizedEmail);
+        builder.HasIndex(x => x.NormalizedEmail)
+            .IsUnique();
 
         builder.Property(x => x.UserName)
             .HasMaxLength(100)
@@ -29,6 +30,9 @@ internal sealed class UserConfigurations : AuditEntityConfiguration<User>
 
         builder.Property(x => x.PasswordHash)
             .IsRequired();
+
+        builder.Property(x => x.Phone)
+            .HasMaxLength(32);
 
         base.Configure(builder);
     }

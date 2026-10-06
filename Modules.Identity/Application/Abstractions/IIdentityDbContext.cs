@@ -8,6 +8,7 @@ public interface IIdentityDbContext : IBaseDbContext
 {
     DatabaseFacade Database { get; }
 
+    DbSet<BusinessProfile> BusinessProfiles { get; }
     DbSet<Branch> Branches { get; }
     DbSet<BranchMembership> BranchMemberships { get; }
     DbSet<GroupRole> GroupRoles { get; }

@@ -13,6 +13,7 @@ public class Tenant : AuditableEntity
     public Guid? Logo { get; set; }
     public bool IsActive { get; set; } = true;
 
+    public BusinessProfile? BusinessProfile { get; set; }
     public ICollection<TenantMembership> Memberships { get; set; } = [];
     public ICollection<Branch> Branches { get; set; } = [];
     public virtual ICollection<TenantModule> TenantModules { get; set; } = [];

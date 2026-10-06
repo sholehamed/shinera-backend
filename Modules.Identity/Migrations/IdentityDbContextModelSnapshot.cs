@@ -119,6 +119,88 @@ namespace Modules.Identity.Migrations
                     b.ToTable("ApiResources");
                 });
 
+            modelBuilder.Entity("Modules.System.Identity.Domain.Entities.BusinessProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("BusinessType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("LastModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("LastModifiedByIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<Guid?>("LogoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .IsDescending();
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("BusinessProfiles");
+                });
+
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.Branch", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1391,6 +1473,10 @@ namespace Modules.Identity.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Phone")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -1409,11 +1495,23 @@ b.Property<string>("UserName")
                     b.HasIndex("CreatedAt")
                         .IsDescending();
 
-                    b.HasIndex("NormalizedEmail");
+                    b.HasIndex("NormalizedEmail")
+                        .IsUnique();
 
                     b.HasIndex("NormalizedUserName");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Modules.System.Identity.Domain.Entities.BusinessProfile", b =>
+                {
+                    b.HasOne("Modules.System.Identity.Domain.Entities.Tenant", "Tenant")
+                        .WithOne("BusinessProfile")
+                        .HasForeignKey("Modules.System.Identity.Domain.Entities.BusinessProfile", "TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.Branch", b =>
@@ -2292,6 +2390,8 @@ b.Property<string>("UserName")
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.Tenant", b =>
                 {
                     b.Navigation("Branches");
+
+                    b.Navigation("BusinessProfile");
 
                     b.Navigation("Memberships");
 
