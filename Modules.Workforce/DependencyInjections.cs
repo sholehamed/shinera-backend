@@ -1,4 +1,5 @@
 using Modules.System.Workforce.Application.Abstractions;
+using Modules.System.Workforce.Application.Scheduling;
 using Modules.System.Workforce.Infrastructure.Persistence.Contexts;
 using Modules.System.Workforce.Infrastructure.Persistence.Interceptors;
 using System.Reflection;
@@ -26,6 +27,10 @@ public static class DependencyInjections
         services.AddScoped<IWorkforceDbContext>(
             provider =>
                 provider.GetRequiredService<WorkforceDbContext>());
+
+        services.AddScoped<
+            IStaffScheduleAvailabilityService,
+            StaffScheduleAvailabilityService>();
 
         services.AddCustomCqrs(
             Assembly.GetExecutingAssembly());

@@ -161,7 +161,9 @@ public sealed class SystemPermissionCatalogSeedContributorTests
                     "staff.assign_services",
                     "staff.create",
                     "staff.update",
-                    "staff.view"
+                    "staff.update_schedule",
+                    "staff.view",
+                    "staff.view_schedule"
                 },
                 workspacePermissionCodes);
         }

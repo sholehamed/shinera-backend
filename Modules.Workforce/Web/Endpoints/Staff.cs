@@ -1,5 +1,6 @@
 using Modules.System.Identity.Application.Authorization;
 using Modules.System.Workforce.Application.Features.Staff;
+using Modules.System.Workforce.Application.Features.Schedules;
 using Web.SharedKernel.Authorization;
 using Web.SharedKernel.Models;
 
@@ -56,7 +57,21 @@ public sealed class Staff : EndpointGroupBase
                 configure: endpoint =>
                     endpoint.RequirePermission(
                         SystemPermissionCatalog.Staff.Resource,
-                        SystemPermissionCatalog.Staff.AssignServices));
+                        SystemPermissionCatalog.Staff.AssignServices))
+            .MapGet(
+                Schedule,
+                "{id}/schedule",
+                configure: endpoint =>
+                    endpoint.RequirePermission(
+                        SystemPermissionCatalog.Staff.Resource,
+                        SystemPermissionCatalog.Staff.ViewSchedule))
+            .MapPut(
+                ReplaceSchedule,
+                "{id}/schedule",
+                configure: endpoint =>
+                    endpoint.RequirePermission(
+                        SystemPermissionCatalog.Staff.Resource,
+                        SystemPermissionCatalog.Staff.UpdateSchedule));
     }
 
     public async Task<Ok<PagedList<StaffListItemDto>>> List(
@@ -183,6 +198,33 @@ public sealed class Staff : EndpointGroupBase
         return TypedResults.NoContent();
     }
 
+    public async Task<Ok<StaffWeeklyScheduleDto>> Schedule(
+        IDispatcher dispatcher,
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var result = await dispatcher.Query(
+            new StaffWeeklyScheduleQuery(id),
+            cancellationToken);
+
+        return TypedResults.Ok(result);
+    }
+
+    public async Task<NoContent> ReplaceSchedule(
+        IDispatcher dispatcher,
+        Guid id,
+        StaffWeeklyScheduleRequest request,
+        CancellationToken cancellationToken)
+    {
+        await dispatcher.Send(
+            new ReplaceStaffWeeklyScheduleCommand(
+                id,
+                request.Days),
+            cancellationToken);
+
+        return TypedResults.NoContent();
+    }
+
     public sealed record UpdateStaffRequest(
         string FirstName,
         string LastName,
@@ -198,4 +240,7 @@ public sealed class Staff : EndpointGroupBase
 
     public sealed record StaffServicesRequest(
         IReadOnlyCollection<Guid> ServiceIds);
+
+    public sealed record StaffWeeklyScheduleRequest(
+        IReadOnlyCollection<StaffScheduleDayInput>? Days);
 }
