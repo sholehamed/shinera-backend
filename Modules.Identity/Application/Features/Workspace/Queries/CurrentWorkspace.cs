@@ -61,6 +61,7 @@ public sealed class CurrentWorkspaceQueryHandler(
                     x.UserId == userId &&
                     x.IsActive &&
                     tenantIds.Contains(x.TenantId) &&
+                    x.Branch.TenantId == x.TenantId &&
                     x.Branch.IsActive)
                 .Select(x => new
                 {
