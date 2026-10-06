@@ -31,7 +31,7 @@ internal static class SchedulePermissionGuard
                 OwnerUserId: staffUserId),
             cancellationToken);
 
-        if (!decision.Allowed)
+        if (!decision.IsAllowed)
             throw new ForbiddenAccessException();
     }
 }
