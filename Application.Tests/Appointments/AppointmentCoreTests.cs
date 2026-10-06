@@ -57,7 +57,8 @@ public sealed class AppointmentCoreTests
     {
         await using var fixture =
             await Fixture.CreateAsync(
-                durationMinutes: 30);
+                durationMinutes: 30,
+                includeBreak: true);
 
         var result = await fixture.Availability
             .GetAvailableSlotsAsync(
@@ -362,7 +363,8 @@ public sealed class AppointmentCoreTests
 
         public static async Task<Fixture> CreateAsync(
             int durationMinutes = 60,
-            decimal price = 500_000m)
+            decimal price = 500_000m,
+            bool includeBreak = false)
         {
             var tenantId = Guid.NewGuid();
             var userId = Guid.NewGuid();
@@ -478,21 +480,24 @@ public sealed class AppointmentCoreTests
 
             await workforce.SaveChangesAsync();
 
-            var saturday =
-                await workforce.StaffWeeklyScheduleDays
-                    .SingleAsync(x =>
-                        x.StaffId == staff.Id &&
-                        x.DayOfWeek ==
-                            DayOfWeek.Saturday);
+            if (includeBreak)
+            {
+                var saturday =
+                    await workforce.StaffWeeklyScheduleDays
+                        .SingleAsync(x =>
+                            x.StaffId == staff.Id &&
+                            x.DayOfWeek ==
+                                DayOfWeek.Saturday);
 
-            workforce.StaffScheduleBreaks.Add(
-                new StaffScheduleBreak(
-                    tenantId,
-                    saturday.Id,
-                    new TimeOnly(10, 0),
-                    new TimeOnly(10, 30)));
+                workforce.StaffScheduleBreaks.Add(
+                    new StaffScheduleBreak(
+                        tenantId,
+                        saturday.Id,
+                        new TimeOnly(10, 0),
+                        new TimeOnly(10, 30)));
 
-            await workforce.SaveChangesAsync();
+                await workforce.SaveChangesAsync();
+            }
 
             var crmConnection = await OpenAsync();
             var crm =
