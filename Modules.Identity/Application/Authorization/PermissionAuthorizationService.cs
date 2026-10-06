@@ -106,13 +106,25 @@ public sealed class PermissionAuthorizationService(
         if (!tenantId.HasValue)
             return [];
 
+        var userIsActive = await dbContext.Users
+            .AsNoTracking()
+            .AnyAsync(
+                user =>
+                    user.Id == userId &&
+                    user.IsActive,
+                cancellationToken);
+
+        if (!userIsActive)
+            return [];
+
         var membershipExists = await dbContext.TenantMemberships
             .AsNoTracking()
             .AnyAsync(
                 membership =>
                     membership.TenantId == tenantId.Value &&
                     membership.UserId == userId &&
-                    membership.IsActive,
+                    membership.IsActive &&
+                    membership.Tenant.IsActive,
                 cancellationToken);
 
         if (!membershipExists)
@@ -176,13 +188,29 @@ public sealed class PermissionAuthorizationService(
                 PermissionDecisionCode.TenantContextMissing);
         }
 
+        var userIsActive = await dbContext.Users
+            .AsNoTracking()
+            .AnyAsync(
+                user =>
+                    user.Id == userId &&
+                    user.IsActive,
+                cancellationToken);
+
+        if (!userIsActive)
+        {
+            return GrantResolution.Denied(
+                permissionKey,
+                PermissionDecisionCode.UserInactive);
+        }
+
         var membershipExists = await dbContext.TenantMemberships
             .AsNoTracking()
             .AnyAsync(
                 membership =>
                     membership.TenantId == tenantId.Value &&
                     membership.UserId == userId &&
-                    membership.IsActive,
+                    membership.IsActive &&
+                    membership.Tenant.IsActive,
                 cancellationToken);
 
         if (!membershipExists)
