@@ -118,7 +118,9 @@ public sealed class SystemPermissionCatalogSeedContributor
                 SystemPermissionCatalog.Staff.Create,
                 SystemPermissionCatalog.Staff.Update,
                 SystemPermissionCatalog.Staff.AssignBranches,
-                SystemPermissionCatalog.Staff.AssignServices
+                SystemPermissionCatalog.Staff.AssignServices,
+                SystemPermissionCatalog.Staff.ViewSchedule,
+                SystemPermissionCatalog.Staff.UpdateSchedule
             ]),
         new(
             SystemPermissionCatalog.Dashboard.Resource,

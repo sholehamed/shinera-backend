@@ -31,4 +31,14 @@ public sealed class StaffWeeklyScheduleDay : AuditableEntity, IMustHaveTenant
 
     public Staff Staff { get; set; } = default!;
     public ICollection<StaffScheduleBreak> Breaks { get; set; } = [];
+
+    public void Configure(
+        bool isDayOff,
+        TimeOnly? startTime,
+        TimeOnly? endTime)
+    {
+        IsDayOff = isDayOff;
+        StartTime = isDayOff ? null : startTime;
+        EndTime = isDayOff ? null : endTime;
+    }
 }
