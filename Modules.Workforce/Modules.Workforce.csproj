@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Modules.Identity\Modules.Identity.csproj" />
+    <ProjectReference Include="..\Modules.Services\Modules.Services.csproj" />
+    <ProjectReference Include="..\Web.Sharedkernel\Web.Sharedkernel.csproj" />
+  </ItemGroup>
+
+</Project>
