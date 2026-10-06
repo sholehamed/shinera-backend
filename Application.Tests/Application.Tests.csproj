@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Application.Sharedkernel\Application.Sharedkernel.csproj" />
     <ProjectReference Include="..\Modules.Identity\Modules.Identity.csproj" />
+    <ProjectReference Include="..\Modules.Subscription\Modules.Subscription.csproj" />
   </ItemGroup>
 
 </Project>
