@@ -755,28 +755,6 @@ public sealed class AppointmentCoreTests
         {
             base.OnModelCreating(builder);
 
-            // SQLite cannot translate relational comparison operators directly
-            // for DateTimeOffset. Production SQL Server keeps datetimeoffset;
-            // tests persist the already-normalized UTC instants as DateTime
-            // so the same UTC overlap predicate remains server-evaluated.
-            builder.Entity<Appointment>()
-                .Property(x => x.StartUtc)
-                .HasConversion(
-                    value => value.UtcDateTime,
-                    value => new DateTimeOffset(
-                        DateTime.SpecifyKind(
-                            value,
-                            DateTimeKind.Utc)));
-
-            builder.Entity<Appointment>()
-                .Property(x => x.EndUtc)
-                .HasConversion(
-                    value => value.UtcDateTime,
-                    value => new DateTimeOffset(
-                        DateTime.SpecifyKind(
-                            value,
-                            DateTimeKind.Utc)));
-
             DisableRowVersion(builder);
         }
 
@@ -843,6 +821,29 @@ public sealed class AppointmentCoreTests
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // SQLite cannot translate relational comparison operators directly
+            // for DateTimeOffset. Production SQL Server keeps datetimeoffset;
+            // tests persist the already-normalized UTC instants as DateTime
+            // so the same UTC overlap predicate remains server-evaluated.
+            builder.Entity<Appointment>()
+                .Property(x => x.StartUtc)
+                .HasConversion(
+                    value => value.UtcDateTime,
+                    value => new DateTimeOffset(
+                        DateTime.SpecifyKind(
+                            value,
+                            DateTimeKind.Utc)));
+
+            builder.Entity<Appointment>()
+                .Property(x => x.EndUtc)
+                .HasConversion(
+                    value => value.UtcDateTime,
+                    value => new DateTimeOffset(
+                        DateTime.SpecifyKind(
+                            value,
+                            DateTimeKind.Utc)));
+
             DisableRowVersion(builder);
         }
 
