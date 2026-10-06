@@ -21,7 +21,8 @@ public sealed record RegistrationBusiness(
     string? Phone,
     string? Email,
     string? City,
-    string? Address);
+    string? Address,
+    string DefaultTimeZoneId);
 
 public sealed record RegistrationOwner(
     string FirstName,
@@ -33,7 +34,8 @@ public sealed record RegistrationOwner(
 public sealed record RegistrationBranch(
     string Name,
     string? Phone,
-    string? Address);
+    string? Address,
+    string? TimeZoneId);
 
 public sealed record RegistrationResult(
     Guid UserId,
@@ -95,6 +97,10 @@ public sealed class RegisterWorkspaceCommandValidator
             RuleFor(x => x.Business!.Address)
                 .NotEmpty()
                 .MaximumLength(500);
+
+            RuleFor(x => x.Business!.DefaultTimeZoneId)
+                .NotEmpty()
+                .MaximumLength(128);
         });
 
         When(x => x.Owner is not null, () =>
@@ -135,6 +141,9 @@ public sealed class RegisterWorkspaceCommandValidator
             RuleFor(x => x.Branch!.Address)
                 .NotEmpty()
                 .MaximumLength(500);
+
+            RuleFor(x => x.Branch!.TimeZoneId)
+                .MaximumLength(128);
         });
     }
 }
@@ -144,7 +153,8 @@ public sealed class RegisterWorkspaceCommandHandler(
     ITenantContext tenantContext,
     IPasswordHasher<User> passwordHasher,
     IRegistrationSubscriptionProvisioner subscriptionProvisioner,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ITimeZoneResolver timeZoneResolver)
     : ICommandHandler<RegisterWorkspaceCommand, Result<RegistrationResult>>
 {
     public async Task<Result<RegistrationResult>> Handle(
@@ -157,6 +167,32 @@ public sealed class RegisterWorkspaceCommandHandler(
 
         var normalizedEmail =
             owner.Email.Trim().ToUpperInvariant();
+
+        var tenantTimeZoneId =
+            business.DefaultTimeZoneId.Trim();
+
+        if (!timeZoneResolver.IsValidIanaTimeZoneId(
+                tenantTimeZoneId))
+        {
+            return Result<RegistrationResult>.Failure(
+                Error.Validation(
+                    "registration.timezone_invalid",
+                    "The selected tenant time zone is not a valid IANA time zone identifier."));
+        }
+
+        var branchTimeZoneId =
+            string.IsNullOrWhiteSpace(branchInput.TimeZoneId)
+                ? tenantTimeZoneId
+                : branchInput.TimeZoneId.Trim();
+
+        if (!timeZoneResolver.IsValidIanaTimeZoneId(
+                branchTimeZoneId))
+        {
+            return Result<RegistrationResult>.Failure(
+                Error.Validation(
+                    "registration.branch_timezone_invalid",
+                    "The selected branch time zone is not a valid IANA time zone identifier."));
+        }
 
         using (tenantContext.DisableFilter())
         {
@@ -202,6 +238,7 @@ public sealed class RegisterWorkspaceCommandHandler(
             {
                 Name = business.Name.Trim(),
                 Slug = slug,
+                DefaultTimeZoneId = tenantTimeZoneId,
                 IsActive = true
             };
 
@@ -228,7 +265,8 @@ public sealed class RegisterWorkspaceCommandHandler(
                 branchInput.Name.Trim(),
                 Normalize(branchInput.Phone),
                 Normalize(branchInput.Address),
-                isMain: true);
+                isMain: true,
+                timeZoneId: branchTimeZoneId);
 
             var businessProfile = new BusinessProfile(
                 tenantId,
