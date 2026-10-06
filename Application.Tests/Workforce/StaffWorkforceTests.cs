@@ -93,7 +93,8 @@ public sealed class StaffWorkforceTests
             fixture.Workforce,
             fixture.Identity,
             fixture.TenantContext,
-            fixture.TenantAuthorization);
+            fixture.TenantAuthorization,
+            new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
 
         var result = await handler.Handle(
             new ReplaceStaffBranchesCommand(
@@ -120,7 +121,8 @@ public sealed class StaffWorkforceTests
             fixture.Workforce,
             fixture.Services,
             fixture.TenantContext,
-            fixture.TenantAuthorization);
+            fixture.TenantAuthorization,
+            new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
 
         var firstResult = await handler.Handle(
             new ReplaceStaffServicesCommand(
@@ -160,7 +162,8 @@ public sealed class StaffWorkforceTests
             fixture.Workforce,
             fixture.Services,
             fixture.TenantContext,
-            fixture.TenantAuthorization);
+            fixture.TenantAuthorization,
+            new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
 
         var result = await handler.Handle(
             new ReplaceStaffServicesCommand(
