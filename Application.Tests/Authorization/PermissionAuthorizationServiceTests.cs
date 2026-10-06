@@ -185,6 +185,82 @@ public sealed class PermissionAuthorizationServiceTests
     }
 
     [Fact]
+    public async Task InactiveUser_DeniesExistingPermissionGrant()
+    {
+        var tenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        await using var fixture = await CreateFixtureAsync(tenantId, userId);
+        var permissionId = await fixture.SeedPermissionAsync(
+            "customers",
+            "view");
+
+        fixture.Db.PermissionAssignments.Add(
+            new PermissionAssignment(
+                tenantId,
+                permissionId,
+                PermissionSubjectType.User,
+                userId,
+                PermissionScopeType.Tenant));
+
+        await fixture.Db.SaveChangesAsync();
+
+        var user = await fixture.Db.Users
+            .SingleAsync(x => x.Id == userId);
+
+        user.IsActive = false;
+        await fixture.Db.SaveChangesAsync();
+
+        var decision = await fixture.Service.HasPermissionAsync(
+            userId,
+            "customers",
+            "view");
+
+        Assert.False(decision.IsAllowed);
+        Assert.Equal(
+            PermissionDecisionCode.UserInactive,
+            decision.Code);
+    }
+
+    [Fact]
+    public async Task InactiveTenant_DeniesExistingPermissionGrant()
+    {
+        var tenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        await using var fixture = await CreateFixtureAsync(tenantId, userId);
+        var permissionId = await fixture.SeedPermissionAsync(
+            "customers",
+            "view");
+
+        fixture.Db.PermissionAssignments.Add(
+            new PermissionAssignment(
+                tenantId,
+                permissionId,
+                PermissionSubjectType.User,
+                userId,
+                PermissionScopeType.Tenant));
+
+        await fixture.Db.SaveChangesAsync();
+
+        var tenant = await fixture.Db.Tenants
+            .SingleAsync(x => x.Id == tenantId);
+
+        tenant.IsActive = false;
+        await fixture.Db.SaveChangesAsync();
+
+        var decision = await fixture.Service.HasPermissionAsync(
+            userId,
+            "customers",
+            "view");
+
+        Assert.False(decision.IsAllowed);
+        Assert.Equal(
+            PermissionDecisionCode.TenantMembershipRequired,
+            decision.Code);
+    }
+
+    [Fact]
     public async Task EndpointPermissionGate_AllowsOwnGrantWithoutResourceContext()
     {
         var tenantId = Guid.NewGuid();
