@@ -102,6 +102,15 @@ public sealed class SystemPermissionCatalogSeedContributor
                 SystemPermissionCatalog.Menus.Delete
             ]),
         new(
+            SystemPermissionCatalog.Services.Resource,
+            "Services",
+            [
+                SystemPermissionCatalog.Services.View,
+                SystemPermissionCatalog.Services.Create,
+                SystemPermissionCatalog.Services.Update,
+                SystemPermissionCatalog.Services.Delete
+            ]),
+        new(
             SystemPermissionCatalog.Dashboard.Resource,
             "Dashboard",
             [

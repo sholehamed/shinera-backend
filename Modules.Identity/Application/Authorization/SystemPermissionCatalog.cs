@@ -91,6 +91,15 @@ public static class SystemPermissionCatalog
         public const string Delete = "delete";
     }
 
+    public static class Services
+    {
+        public const string Resource = "services";
+        public const string View = "view";
+        public const string Create = "create";
+        public const string Update = "update";
+        public const string Delete = "delete";
+    }
+
     public static class Dashboard
     {
         public const string Resource = "dashboard";
@@ -121,6 +130,10 @@ public static class SystemPermissionCatalog
         Key(Groups.Resource, Groups.Update),
         Key(Groups.Resource, Groups.Delete),
         Key(Permissions.Resource, Permissions.List),
+        Key(Services.Resource, Services.View),
+        Key(Services.Resource, Services.Create),
+        Key(Services.Resource, Services.Update),
+        Key(Services.Resource, Services.Delete),
         Key(Dashboard.Resource, Dashboard.View)
     ];
 
