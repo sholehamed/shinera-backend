@@ -32,8 +32,7 @@ public sealed class AvailableSlotsQueryValidator
 public sealed class AvailableSlotsQueryHandler(
     IAppointmentAvailabilityService availabilityService,
     ICurrentTenant currentTenant,
-    IPermissionAuthorizationService authorizationService,
-    IStaffBookingConcurrencyGuard concurrencyGuard)
+    IPermissionAuthorizationService authorizationService)
     : IQueryHandler<
         AvailableSlotsQuery,
         Result<IReadOnlyList<TimeOnly>>>
@@ -89,7 +88,8 @@ public sealed class CreateAppointmentCommandHandler(
     ICrmDbContext crmDb,
     IAppointmentAvailabilityService availabilityService,
     ICurrentTenant currentTenant,
-    IPermissionAuthorizationService authorizationService)
+    IPermissionAuthorizationService authorizationService,
+    IStaffBookingConcurrencyGuard concurrencyGuard)
     : ICommandHandler<CreateAppointmentCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(
@@ -112,12 +112,24 @@ public sealed class CreateAppointmentCommandHandler(
             await db.Database.BeginTransactionAsync(
                 cancellationToken);
 
-        var staffLocked =
-            await concurrencyGuard.TryAcquireAsync(
-                db.Database,
-                tenantId,
-                command.StaffId,
-                cancellationToken);
+        bool staffLocked;
+
+        try
+        {
+            staffLocked =
+                await concurrencyGuard.TryAcquireAsync(
+                    db.Database,
+                    tenantId,
+                    command.StaffId,
+                    cancellationToken);
+        }
+        catch (StaffBookingConcurrencyException ex)
+        {
+            throw new StaffBookingConcurrencyException(
+                "appointment.conflict",
+                "The selected time is no longer available. Please choose another time.",
+                ex);
+        }
 
         if (!staffLocked)
         {
