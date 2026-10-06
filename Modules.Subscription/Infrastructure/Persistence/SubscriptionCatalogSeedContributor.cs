@@ -57,7 +57,7 @@ public sealed class SubscriptionCatalogSeedContributor(
             plan.Name = definition.Name;
             plan.Description = definition.Description;
             plan.DisplayOrder = definition.DisplayOrder;
-            plan.IsActive = true;
+            // Preserve an explicit administrative deactivation.
         }
 
         await db.SaveChangesAsync(cancellationToken);
