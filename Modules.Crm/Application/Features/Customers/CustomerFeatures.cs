@@ -151,7 +151,8 @@ public sealed class CustomerDetailsQueryHandler(
         var customer = await db.Customers
             .AsNoTracking()
             .Where(x => x.Id == query.Id)
-            .Select(x => new CustomerDetailsDto(
+            .Select(x => new
+            {
                 x.Id,
                 x.UserId,
                 x.FirstName,
@@ -162,26 +163,40 @@ public sealed class CustomerDetailsQueryHandler(
                 x.Gender,
                 x.Notes,
                 x.IsVip,
-                x.IsActive,
-                x.NoteEntries
-                    .OrderByDescending(note =>
-                        note.CreatedAt)
-                    .ThenByDescending(note =>
-                        note.Id)
-                    .Select(note =>
-                        new CustomerNoteDto(
-                            note.Id,
-                            note.Content,
-                            note.CreatedAt,
-                            note.CreatedBy))
-                    .ToList()))
+                x.IsActive
+            })
             .SingleOrDefaultAsync(cancellationToken);
 
         Guard.Against.NotFound(
             query.Id,
             customer);
 
-        return customer;
+        var noteEntries = await db.CustomerNotes
+            .AsNoTracking()
+            .Where(x => x.CustomerId == query.Id)
+            .Select(x => new CustomerNoteDto(
+                x.Id,
+                x.Content,
+                x.CreatedAt,
+                x.CreatedBy))
+            .ToListAsync(cancellationToken);
+
+        return new CustomerDetailsDto(
+            customer.Id,
+            customer.UserId,
+            customer.FirstName,
+            customer.LastName,
+            customer.Mobile,
+            customer.Email,
+            customer.Birthday,
+            customer.Gender,
+            customer.Notes,
+            customer.IsVip,
+            customer.IsActive,
+            noteEntries
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .ToArray());
     }
 }
 
