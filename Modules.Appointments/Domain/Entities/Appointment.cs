@@ -53,7 +53,7 @@ public sealed class Appointment : AuditableEntity, IMustHaveTenant
     public TimeOnly StartTime { get; set; }
     public TimeOnly EndTime { get; set; }
     public decimal Price { get; set; }
-    public AppointmentStatus Status { get; set; }
+    public AppointmentStatus Status { get; private set; }
     public string? Notes { get; set; }
 
     public bool CanTransitionTo(AppointmentStatus next) =>
