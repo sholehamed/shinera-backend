@@ -23,6 +23,7 @@ public sealed class SecureByDefaultEndpointTests(
     [InlineData("/Workforce/Staff")]
     [InlineData("/Workforce/Staff/11111111-1111-1111-1111-111111111111/schedule")]
     [InlineData("/Crm/Customers")]
+    [InlineData("/Appointments/Appointments/available-slots")]
     public async Task ManagedEndpoints_WithoutAuthentication_ReturnUnauthorized(
         string path)
     {
