@@ -14,6 +14,7 @@ public sealed class EndpointAuthorizationMetadataTests(
     [
         "/System/Tenants",
         "/System/Branches",
+        "/System/BusinessProfiles",
         "/System/Modules",
         "/System/Resources",
         "/System/Users",

@@ -11,6 +11,7 @@ public sealed class SecureByDefaultEndpointTests(
     [Theory]
     [InlineData("/System/Tenants/pagedList")]
     [InlineData("/System/Branches")]
+    [InlineData("/System/BusinessProfiles")]
     [InlineData("/System/Workspace/current")]
     [InlineData("/System/Users/pagedList")]
     [InlineData("/System/Roles/lookup")]
@@ -43,6 +44,49 @@ public sealed class SecureByDefaultEndpointTests(
 
         Assert.Equal(
             HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RegistrationEndpoint_RemainsExplicitlyAnonymous()
+    {
+        using var client = factory.CreateClient(
+            new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false
+            });
+
+        var response = await client.PostAsJsonAsync(
+            "/System/Registration",
+            new
+            {
+                planKey = "",
+                business = new
+                {
+                    name = "",
+                    businessType = "",
+                    mode = 1
+                },
+                owner = new
+                {
+                    firstName = "",
+                    lastName = "",
+                    phone = "",
+                    email = "",
+                    password = ""
+                },
+                branch = new
+                {
+                    name = ""
+                }
+            });
+
+        Assert.NotEqual(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+
+        Assert.NotEqual(
+            HttpStatusCode.Forbidden,
             response.StatusCode);
     }
 
