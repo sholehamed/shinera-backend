@@ -303,7 +303,32 @@ public sealed class CreateCustomerCommandHandler(
             command.IsVip);
 
         db.Customers.Add(customer);
-        await db.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            var duplicateAfterRace = await db.Customers
+                .AsNoTracking()
+                .AnyAsync(
+                    x =>
+                        x.Id != customer.Id &&
+                        x.NormalizedMobile ==
+                            normalizedMobile,
+                    cancellationToken);
+
+            if (duplicateAfterRace)
+            {
+                return Result.Failure<Guid>(
+                    Error.Conflict(
+                        "customer.mobile_duplicate",
+                        "A customer with this mobile already exists in the current tenant."));
+            }
+
+            throw;
+        }
 
         return Result.Success(customer.Id);
     }
