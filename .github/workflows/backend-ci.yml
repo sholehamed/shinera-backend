@@ -70,5 +70,14 @@ jobs:
             --output /tmp/workforce-migrations.sql
           test -s /tmp/workforce-migrations.sql
 
+      - name: Verify CRM migration chain
+        run: |
+          dotnet ef migrations script --idempotent \
+            --project Modules.Crm/Modules.Crm.csproj \
+            --startup-project Web/Web.csproj \
+            --context CrmDbContext \
+            --output /tmp/crm-migrations.sql
+          test -s /tmp/crm-migrations.sql
+
       - name: Test
         run: dotnet test shinera-back.slnx --configuration Release --no-build --verbosity normal

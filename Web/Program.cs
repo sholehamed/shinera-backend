@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Modules.System.Crm;
 using Modules.System.Identity;
 using Modules.System.Subscription;
 using Modules.System.Services;
@@ -20,6 +21,7 @@ builder.Services.AddIdentityModule(
 builder.Services.AddSubscriptionModule(builder.Configuration);
 builder.Services.AddServicesModule(builder.Configuration);
 builder.Services.AddWorkforceModule(builder.Configuration);
+builder.Services.AddCrmModule(builder.Configuration);
 
 builder.Services.AddScalarClientGeneration();
 builder.Services.AddOpenApi();
@@ -40,6 +42,7 @@ app.UseIdentityModule(builder.Configuration);
 app.UseSubscriptionModule(builder.Configuration);
 app.UseServicesModule(builder.Configuration);
 app.UseWorkforceModule(builder.Configuration);
+app.UseCrmModule(builder.Configuration);
 
 app.MapHealthChecks(
     "/health/live",

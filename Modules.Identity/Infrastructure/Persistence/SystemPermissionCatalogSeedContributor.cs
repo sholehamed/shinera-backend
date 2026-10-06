@@ -123,6 +123,14 @@ public sealed class SystemPermissionCatalogSeedContributor
                 SystemPermissionCatalog.Staff.UpdateSchedule
             ]),
         new(
+            SystemPermissionCatalog.Customers.Resource,
+            "Customers",
+            [
+                SystemPermissionCatalog.Customers.View,
+                SystemPermissionCatalog.Customers.Create,
+                SystemPermissionCatalog.Customers.AddNote
+            ]),
+        new(
             SystemPermissionCatalog.Dashboard.Resource,
             "Dashboard",
             [
