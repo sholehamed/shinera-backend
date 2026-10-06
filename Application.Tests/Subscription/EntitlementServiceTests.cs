@@ -285,7 +285,7 @@ public sealed class EntitlementServiceTests
                 new PlanFeature(
                     planId,
                     feature.Id,
-                    IsEnabled: true));
+                    isEnabled: true));
 
             await fixture.Db.SaveChangesAsync();
         }
