@@ -1,4 +1,5 @@
 using Modules.System.Appointments.Application.Abstractions;
+using Modules.System.Appointments.Domain;
 using Modules.System.Appointments.Domain.Entities;
 using Modules.System.Identity.Application.Abstractions;
 using Modules.System.Services.Application.Abstractions;
@@ -27,6 +28,9 @@ public interface IAppointmentAvailabilityService
 
 public sealed record AppointmentSlotValidation(
     TimeOnly EndTime,
+    DateTimeOffset StartUtc,
+    DateTimeOffset EndUtc,
+    string TimeZoneId,
     decimal Price);
 
 public sealed class AppointmentAvailabilityService(
@@ -34,9 +38,11 @@ public sealed class AppointmentAvailabilityService(
     IIdentityDbContext identityDb,
     IServiceCatalogDbContext servicesDb,
     IWorkforceDbContext workforceDb,
-    IStaffScheduleAvailabilityService staffScheduleAvailability)
+    IStaffScheduleAvailabilityService staffScheduleAvailability,
+    ITimeZoneResolver timeZoneResolver)
     : IAppointmentAvailabilityService
 {
+
     public async Task<Result<IReadOnlyList<TimeOnly>>> GetAvailableSlotsAsync(
         Guid branchId,
         Guid serviceId,
@@ -44,18 +50,30 @@ public sealed class AppointmentAvailabilityService(
         DateOnly date,
         CancellationToken cancellationToken = default)
     {
-        var branchIsActive = await identityDb.Branches
+        var branch = await identityDb.Branches
             .AsNoTracking()
-            .AnyAsync(
-                x => x.Id == branchId && x.IsActive,
-                cancellationToken);
+            .Where(x => x.Id == branchId && x.IsActive)
+            .Select(x => new
+            {
+                x.TimeZoneId
+            })
+            .SingleOrDefaultAsync(cancellationToken);
 
-        if (!branchIsActive)
+        if (branch is null)
         {
             return Result<IReadOnlyList<TimeOnly>>.Failure(
                 Error.Validation(
                     "appointment.branch_invalid",
                     "The selected branch is not valid for the current tenant."));
+        }
+
+        if (!timeZoneResolver.IsValidIanaTimeZoneId(
+                branch.TimeZoneId))
+        {
+            return Result<IReadOnlyList<TimeOnly>>.Failure(
+                Error.Validation(
+                    "appointment.branch_timezone_invalid",
+                    "The selected branch does not have a valid IANA time zone."));
         }
 
         var service = await servicesDb.Services
@@ -111,14 +129,14 @@ public sealed class AppointmentAvailabilityService(
 
         var blockingAppointments = await appointmentsDb.Appointments
             .AsNoTracking()
+            .Where(AppointmentBookingRules.BlockingPredicate)
             .Where(x =>
                 eligibleStaffIds.Contains(x.StaffId) &&
-                x.Date == date &&
-                x.Status != AppointmentStatus.Cancelled)
+                x.Date == date)
             .Select(x => new BusyRange(
                 x.StaffId,
-                x.StartTime,
-                x.EndTime))
+                x.StartUtc,
+                x.EndUtc))
             .ToListAsync(cancellationToken);
 
         var slots = new HashSet<TimeOnly>();
@@ -145,21 +163,27 @@ public sealed class AppointmentAvailabilityService(
             {
                 var cursor = segment.StartTime;
 
-                while (TryAddMinutes(
-                           cursor,
-                           service.DurationMinutes,
-                           out var endTime) &&
-                       endTime <= segment.EndTime)
+                while (cursor < segment.EndTime)
                 {
+                    var candidate = ResolveInterval(
+                        date,
+                        cursor,
+                        service.DurationMinutes,
+                        segment.EndTime,
+                        branch.TimeZoneId);
+
+                    if (candidate.IsFailure)
+                        break;
+
                     if (!staffBusyRanges.Any(
                             busy =>
-                                busy.StartTime < endTime &&
-                                busy.EndTime > cursor))
+                                busy.StartUtc < candidate.Value.EndUtc &&
+                                busy.EndUtc > candidate.Value.StartUtc))
                     {
                         slots.Add(cursor);
                     }
 
-                    cursor = endTime;
+                    cursor = candidate.Value.EndTime;
                 }
             }
         }
@@ -176,18 +200,30 @@ public sealed class AppointmentAvailabilityService(
         TimeOnly startTime,
         CancellationToken cancellationToken = default)
     {
-        var branchIsActive = await identityDb.Branches
+        var branch = await identityDb.Branches
             .AsNoTracking()
-            .AnyAsync(
-                x => x.Id == branchId && x.IsActive,
-                cancellationToken);
+            .Where(x => x.Id == branchId && x.IsActive)
+            .Select(x => new
+            {
+                x.TimeZoneId
+            })
+            .SingleOrDefaultAsync(cancellationToken);
 
-        if (!branchIsActive)
+        if (branch is null)
         {
             return Result<AppointmentSlotValidation>.Failure(
                 Error.Validation(
                     "appointment.branch_invalid",
                     "The selected branch is not valid for the current tenant."));
+        }
+
+        if (!timeZoneResolver.IsValidIanaTimeZoneId(
+                branch.TimeZoneId))
+        {
+            return Result<AppointmentSlotValidation>.Failure(
+                Error.Validation(
+                    "appointment.branch_timezone_invalid",
+                    "The selected branch does not have a valid IANA time zone."));
         }
 
         var service = await servicesDb.Services
@@ -228,32 +264,14 @@ public sealed class AppointmentAvailabilityService(
                     "The selected staff member is not active for this branch and service."));
         }
 
-        if (!TryAddMinutes(
-                startTime,
-                service.DurationMinutes,
-                out var endTime))
-        {
-            return Result<AppointmentSlotValidation>.Failure(
-                Error.Validation(
-                    "appointment.time_invalid",
-                    "The service would finish outside the selected date."));
-        }
-
         var schedule = await staffScheduleAvailability.ResolveAsync(
             staffId,
             date,
             cancellationToken);
 
-        var isInsideAvailableSchedule =
-            schedule.IsConfigured &&
-            schedule.IsStaffActive &&
-            !schedule.IsDayOff &&
-            schedule.AvailableSegments.Any(
-                segment =>
-                    segment.StartTime <= startTime &&
-                    segment.EndTime >= endTime);
-
-        if (!isInsideAvailableSchedule)
+        if (!schedule.IsConfigured ||
+            !schedule.IsStaffActive ||
+            schedule.IsDayOff)
         {
             return Result<AppointmentSlotValidation>.Failure(
                 Error.Validation(
@@ -261,34 +279,112 @@ public sealed class AppointmentAvailabilityService(
                     "The selected time is outside the staff member's available schedule."));
         }
 
-        return Result<AppointmentSlotValidation>.Success(
-            new AppointmentSlotValidation(
-                endTime,
-                service.Price));
-    }
-
-    private static bool TryAddMinutes(
-        TimeOnly startTime,
-        int minutes,
-        out TimeOnly endTime)
-    {
-        var total =
-            startTime.ToTimeSpan() +
-            TimeSpan.FromMinutes(minutes);
-
-        if (minutes <= 0 ||
-            total >= TimeSpan.FromDays(1))
+        foreach (var segment in schedule.AvailableSegments)
         {
-            endTime = default;
-            return false;
+            if (segment.StartTime > startTime ||
+                segment.EndTime <= startTime)
+            {
+                continue;
+            }
+
+            var interval = ResolveInterval(
+                date,
+                startTime,
+                service.DurationMinutes,
+                segment.EndTime,
+                branch.TimeZoneId);
+
+            if (interval.IsFailure)
+            {
+                return Result<AppointmentSlotValidation>.Failure(
+                    interval.Error);
+            }
+
+            return Result<AppointmentSlotValidation>.Success(
+                new AppointmentSlotValidation(
+                    interval.Value.EndTime,
+                    interval.Value.StartUtc,
+                    interval.Value.EndUtc,
+                    branch.TimeZoneId,
+                    service.Price));
         }
 
-        endTime = TimeOnly.FromTimeSpan(total);
-        return true;
+        return Result<AppointmentSlotValidation>.Failure(
+            Error.Validation(
+                "appointment.outside_schedule",
+                "The selected time is outside the staff member's available schedule."));
+    }
+
+    private Result<ResolvedInterval> ResolveInterval(
+        DateOnly date,
+        TimeOnly startTime,
+        int durationMinutes,
+        TimeOnly segmentEndTime,
+        string timeZoneId)
+    {
+        if (durationMinutes <= 0)
+        {
+            return Result<ResolvedInterval>.Failure(
+                Error.Validation(
+                    "appointment.time_invalid",
+                    "Appointment duration must be greater than zero."));
+        }
+
+        var startUtc = timeZoneResolver.ResolveToUtc(
+            date,
+            startTime,
+            timeZoneId);
+
+        if (startUtc.IsFailure)
+        {
+            return Result<ResolvedInterval>.Failure(
+                startUtc.Error);
+        }
+
+        var endUtc =
+            startUtc.Value.AddMinutes(durationMinutes);
+
+        var endLocal = timeZoneResolver.ResolveFromUtc(
+            endUtc,
+            timeZoneId);
+
+        if (endLocal.IsFailure)
+        {
+            return Result<ResolvedInterval>.Failure(
+                endLocal.Error);
+        }
+
+        if (endLocal.Value.Date != date)
+        {
+            return Result<ResolvedInterval>.Failure(
+                Error.Validation(
+                    "appointment.time_invalid",
+                    "The service would finish outside the selected business date."));
+        }
+
+        if (endLocal.Value.Time <= startTime ||
+            endLocal.Value.Time > segmentEndTime)
+        {
+            return Result<ResolvedInterval>.Failure(
+                Error.Validation(
+                    "appointment.outside_schedule",
+                    "The selected time is outside the staff member's available schedule."));
+        }
+
+        return Result<ResolvedInterval>.Success(
+            new ResolvedInterval(
+                endLocal.Value.Time,
+                startUtc.Value,
+                endUtc));
     }
 
     private sealed record BusyRange(
         Guid StaffId,
-        TimeOnly StartTime,
-        TimeOnly EndTime);
+        DateTimeOffset StartUtc,
+        DateTimeOffset EndUtc);
+
+    private sealed record ResolvedInterval(
+        TimeOnly EndTime,
+        DateTimeOffset StartUtc,
+        DateTimeOffset EndUtc);
 }

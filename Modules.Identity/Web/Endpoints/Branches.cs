@@ -101,7 +101,8 @@ public sealed class Branches : EndpointGroupBase
                 id,
                 request.Name,
                 request.Phone,
-                request.Address),
+                request.Address,
+                request.TimeZoneId),
             cancellationToken);
 
         return TypedResults.NoContent();
@@ -150,5 +151,6 @@ public sealed class Branches : EndpointGroupBase
     public sealed record BranchUpdateRequest(
         string Name,
         string? Phone,
-        string? Address);
+        string? Address,
+        string? TimeZoneId);
 }

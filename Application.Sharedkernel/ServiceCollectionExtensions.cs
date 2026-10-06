@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
         Assembly[] assemblies)
     {
         services.TryAddSingleton<System.TimeProvider>(_ => System.TimeProvider.System);
+        services.TryAddSingleton<ITimeZoneResolver, TimeZoneResolver>();
 
         // Compatibility adapter for legacy slices. New code should inject System.TimeProvider directly.
         services.TryAddSingleton<IDateTimeProvider, DateTimeProvider>();

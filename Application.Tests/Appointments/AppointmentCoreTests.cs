@@ -111,6 +111,20 @@ public sealed class AppointmentCoreTests
         Assert.Equal(
             AppointmentStatus.Confirmed,
             appointment.Status);
+
+        Assert.Equal(
+            "Asia/Tehran",
+            appointment.TimeZoneId);
+
+        Assert.Equal(
+            new DateTimeOffset(
+                2026, 10, 10, 5, 30, 0, TimeSpan.Zero),
+            appointment.StartUtc);
+
+        Assert.Equal(
+            new DateTimeOffset(
+                2026, 10, 10, 6, 30, 0, TimeSpan.Zero),
+            appointment.EndUtc);
     }
 
     [Fact]
@@ -192,8 +206,50 @@ public sealed class AppointmentCoreTests
                 fixture.Date,
                 new TimeOnly(9, 0),
                 new TimeOnly(10, 0),
+                new DateTimeOffset(
+                    fixture.Date.ToDateTime(
+                        new TimeOnly(9, 0),
+                        DateTimeKind.Utc)),
+                new DateTimeOffset(
+                    fixture.Date.ToDateTime(
+                        new TimeOnly(10, 0),
+                        DateTimeKind.Utc)),
+                "Etc/UTC",
                 500_000m,
                 status: AppointmentStatus.Cancelled));
+
+        await fixture.Appointments.SaveChangesAsync();
+
+        var result = await fixture.CreateAsync(
+            fixture.StaffId,
+            new TimeOnly(9, 0));
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task NoShowAppointment_DoesNotBlockSlot()
+    {
+        await using var fixture =
+            await Fixture.CreateAsync();
+
+        fixture.Appointments.Appointments.Add(
+            new Appointment(
+                fixture.TenantId,
+                fixture.BranchId,
+                fixture.CustomerId,
+                fixture.StaffId,
+                fixture.ServiceId,
+                fixture.Date,
+                new TimeOnly(9, 0),
+                new TimeOnly(10, 0),
+                new DateTimeOffset(
+                    2026, 10, 10, 5, 30, 0, TimeSpan.Zero),
+                new DateTimeOffset(
+                    2026, 10, 10, 6, 30, 0, TimeSpan.Zero),
+                "Asia/Tehran",
+                500_000m,
+                status: AppointmentStatus.NoShow));
 
         await fixture.Appointments.SaveChangesAsync();
 
@@ -248,6 +304,15 @@ public sealed class AppointmentCoreTests
                     fixture.Date,
                     new TimeOnly(9, 0),
                     new TimeOnly(10, 0),
+                    new DateTimeOffset(
+                        fixture.Date.ToDateTime(
+                            new TimeOnly(9, 0),
+                            DateTimeKind.Utc)),
+                    new DateTimeOffset(
+                        fixture.Date.ToDateTime(
+                            new TimeOnly(10, 0),
+                            DateTimeKind.Utc)),
+                    "Etc/UTC",
                     1));
 
             await fixture.Appointments.SaveChangesAsync();
@@ -269,6 +334,11 @@ public sealed class AppointmentCoreTests
             new DateOnly(2026, 10, 10),
             new TimeOnly(9, 0),
             new TimeOnly(10, 0),
+            new DateTimeOffset(
+                2026, 10, 10, 9, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(
+                2026, 10, 10, 10, 0, 0, TimeSpan.Zero),
+            "Etc/UTC",
             100,
             status: status);
 
@@ -326,7 +396,8 @@ public sealed class AppointmentCoreTests
                     Identity,
                     Services,
                     Workforce,
-                    Schedule);
+                    Schedule,
+                    new Application.SharedKernel.Services.TimeZoneResolver());
 
             Authorization =
                 new TenantAuthorizationService();
@@ -337,7 +408,8 @@ public sealed class AppointmentCoreTests
                     Crm,
                     Availability,
                     TenantContext,
-                    Authorization);
+                    Authorization,
+                    new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
         }
 
         public DateOnly Date { get; } =
@@ -391,6 +463,7 @@ public sealed class AppointmentCoreTests
             {
                 Name = "Tenant",
                 Slug = $"tenant-{tenantId:N}",
+                DefaultTimeZoneId = "Asia/Tehran",
                 IsActive = true
             };
 
@@ -398,7 +471,8 @@ public sealed class AppointmentCoreTests
                 tenantId,
                 "Main",
                 isMain: true,
-                isActive: true);
+                isActive: true,
+                timeZoneId: "Asia/Tehran");
 
             identity.Tenants.Add(tenant);
             identity.Branches.Add(branch);
@@ -680,6 +754,7 @@ public sealed class AppointmentCoreTests
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
             DisableRowVersion(builder);
         }
 
@@ -746,6 +821,29 @@ public sealed class AppointmentCoreTests
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // SQLite cannot translate relational comparison operators directly
+            // for DateTimeOffset. Production SQL Server keeps datetimeoffset;
+            // tests persist the already-normalized UTC instants as DateTime
+            // so the same UTC overlap predicate remains server-evaluated.
+            builder.Entity<Appointment>()
+                .Property(x => x.StartUtc)
+                .HasConversion(
+                    value => value.UtcDateTime,
+                    value => new DateTimeOffset(
+                        DateTime.SpecifyKind(
+                            value,
+                            DateTimeKind.Utc)));
+
+            builder.Entity<Appointment>()
+                .Property(x => x.EndUtc)
+                .HasConversion(
+                    value => value.UtcDateTime,
+                    value => new DateTimeOffset(
+                        DateTime.SpecifyKind(
+                            value,
+                            DateTimeKind.Utc)));
+
             DisableRowVersion(builder);
         }
 

@@ -118,7 +118,8 @@ public sealed class StaffWeeklyScheduleTests
         var replace = new ReplaceStaffWeeklyScheduleCommandHandler(
             fixture.Db,
             fixture.TenantContext,
-            fixture.TenantAuthorization);
+            fixture.TenantAuthorization,
+            new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
 
         await replace.Handle(
             new ReplaceStaffWeeklyScheduleCommand(
@@ -176,7 +177,8 @@ public sealed class StaffWeeklyScheduleTests
         var handler = new ReplaceStaffWeeklyScheduleCommandHandler(
             fixture.Db,
             fixture.TenantContext,
-            fixture.TenantAuthorization);
+            fixture.TenantAuthorization,
+            new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
 
         await handler.Handle(
             new ReplaceStaffWeeklyScheduleCommand(
@@ -240,7 +242,8 @@ public sealed class StaffWeeklyScheduleTests
             new ReplaceStaffWeeklyScheduleCommandHandler(
                 fixture.Db,
                 fixture.TenantContext,
-                ownAuthorization);
+                ownAuthorization,
+                new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
 
         await handler.Handle(
             new ReplaceStaffWeeklyScheduleCommand(
@@ -304,7 +307,8 @@ public sealed class StaffWeeklyScheduleTests
         var replace = new ReplaceStaffWeeklyScheduleCommandHandler(
             fixture.Db,
             fixture.TenantContext,
-            fixture.TenantAuthorization);
+            fixture.TenantAuthorization,
+            new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
 
         await replace.Handle(
             new ReplaceStaffWeeklyScheduleCommand(
@@ -365,7 +369,8 @@ public sealed class StaffWeeklyScheduleTests
         var replace = new ReplaceStaffWeeklyScheduleCommandHandler(
             fixture.Db,
             fixture.TenantContext,
-            fixture.TenantAuthorization);
+            fixture.TenantAuthorization,
+            new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
 
         await replace.Handle(
             new ReplaceStaffWeeklyScheduleCommand(
@@ -398,7 +403,8 @@ public sealed class StaffWeeklyScheduleTests
         var replace = new ReplaceStaffWeeklyScheduleCommandHandler(
             fixture.Db,
             fixture.TenantContext,
-            fixture.TenantAuthorization);
+            fixture.TenantAuthorization,
+            new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
 
         await replace.Handle(
             new ReplaceStaffWeeklyScheduleCommand(
@@ -435,7 +441,8 @@ public sealed class StaffWeeklyScheduleTests
             new ReplaceStaffWeeklyScheduleCommandHandler(
                 fixture.Db,
                 fixture.TenantContext,
-                authorization);
+                authorization,
+                new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
 
         await Assert.ThrowsAsync<ForbiddenAccessException>(
             () => handler.Handle(

@@ -1,6 +1,7 @@
 using Modules.System.Appointments.Application.Abstractions;
 using Modules.System.Appointments.Application.Authorization;
 using Modules.System.Appointments.Application.Availability;
+using Modules.System.Appointments.Domain;
 using Modules.System.Appointments.Domain.Entities;
 using Modules.System.Crm.Application.Abstractions;
 using Modules.System.Identity.Application.Authorization;
@@ -87,7 +88,8 @@ public sealed class CreateAppointmentCommandHandler(
     ICrmDbContext crmDb,
     IAppointmentAvailabilityService availabilityService,
     ICurrentTenant currentTenant,
-    IPermissionAuthorizationService authorizationService)
+    IPermissionAuthorizationService authorizationService,
+    IStaffBookingConcurrencyGuard concurrencyGuard)
     : ICommandHandler<CreateAppointmentCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(
@@ -105,6 +107,37 @@ public sealed class CreateAppointmentCommandHandler(
             ?? throw new TenantAccessException(
                 "tenant.context_missing",
                 "A tenant context is required for appointment operations.");
+
+        await using var transaction =
+            await db.Database.BeginTransactionAsync(
+                cancellationToken);
+
+        bool staffLocked;
+
+        try
+        {
+            staffLocked =
+                await concurrencyGuard.TryAcquireAsync(
+                    db.Database,
+                    tenantId,
+                    command.StaffId,
+                    cancellationToken);
+        }
+        catch (StaffBookingConcurrencyException ex)
+        {
+            throw new StaffBookingConcurrencyException(
+                "appointment.conflict",
+                "The selected time is no longer available. Please choose another time.",
+                ex);
+        }
+
+        if (!staffLocked)
+        {
+            return Result<Guid>.Failure(
+                Error.Validation(
+                    "appointment.staff_unavailable",
+                    "The selected staff member is not available for the current tenant."));
+        }
 
         var customerIsActive = await crmDb.Customers
             .AsNoTracking()
@@ -135,19 +168,14 @@ public sealed class CreateAppointmentCommandHandler(
             return Result<Guid>.Failure(slot.Error);
         }
 
-        await using var transaction =
-            await db.Database.BeginTransactionAsync(
-                IsolationLevel.Serializable,
-                cancellationToken);
-
         var hasConflict = await db.Appointments
+            .Where(AppointmentBookingRules.BlockingPredicate)
             .AnyAsync(
                 x =>
                     x.StaffId == command.StaffId &&
                     x.Date == command.Date &&
-                    x.Status != AppointmentStatus.Cancelled &&
-                    x.StartTime < slot.Value.EndTime &&
-                    x.EndTime > command.StartTime,
+                    x.StartUtc < slot.Value.EndUtc &&
+                    x.EndUtc > slot.Value.StartUtc,
                 cancellationToken);
 
         if (hasConflict)
@@ -167,6 +195,9 @@ public sealed class CreateAppointmentCommandHandler(
             command.Date,
             command.StartTime,
             slot.Value.EndTime,
+            slot.Value.StartUtc,
+            slot.Value.EndUtc,
+            slot.Value.TimeZoneId,
             slot.Value.Price,
             command.Notes,
             AppointmentStatus.Confirmed);

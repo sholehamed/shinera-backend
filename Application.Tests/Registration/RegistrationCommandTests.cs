@@ -103,7 +103,8 @@ public sealed class RegistrationCommandTests
             fixture.TenantContext,
             new PasswordHasher<User>(),
             provisioner,
-            TimeProvider.System);
+            TimeProvider.System,
+            new Application.SharedKernel.Services.TimeZoneResolver());
 
         var result = await handler.Handle(
             ValidCommand(),
@@ -172,6 +173,8 @@ public sealed class RegistrationCommandTests
                     .ToListAsync();
 
             Assert.Equal("Demo Salon", tenant.Name);
+            Assert.Equal("Asia/Tehran", tenant.DefaultTimeZoneId);
+            Assert.Equal("Asia/Tehran", branch.TimeZoneId);
             Assert.Equal("09120000000", user.Phone);
             Assert.Equal(BusinessMode.Salon, profile.Mode);
             Assert.Equal("Beauty Salon", profile.BusinessType);
@@ -208,6 +211,46 @@ public sealed class RegistrationCommandTests
     }
 
     [Fact]
+    public async Task Register_InvalidTenantTimeZone_ReturnsValidationFailure()
+    {
+        await using var fixture = await CreateFixtureAsync();
+
+        var provisioner = new StubSubscriptionProvisioner(
+            Result<RegistrationSubscriptionReceipt>.Success(
+                new RegistrationSubscriptionReceipt(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "salon-pro")));
+
+        var handler = new RegisterWorkspaceCommandHandler(
+            fixture.Db,
+            fixture.TenantContext,
+            new PasswordHasher<User>(),
+            provisioner,
+            TimeProvider.System,
+            new Application.SharedKernel.Services.TimeZoneResolver());
+
+        var command = ValidCommand();
+        command = command with
+        {
+            Business = command.Business! with
+            {
+                DefaultTimeZoneId = "Invalid/Zone"
+            }
+        };
+
+        var result = await handler.Handle(
+            command,
+            CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(
+            "registration.timezone_invalid",
+            result.Error.Code);
+        Assert.False(provisioner.WasCalled);
+    }
+
+    [Fact]
     public async Task Register_WhenOwnerEmailAlreadyExists_ReturnsConflict()
     {
         await using var fixture = await CreateFixtureAsync();
@@ -239,7 +282,8 @@ public sealed class RegistrationCommandTests
             fixture.TenantContext,
             new PasswordHasher<User>(),
             provisioner,
-            TimeProvider.System);
+            TimeProvider.System,
+            new Application.SharedKernel.Services.TimeZoneResolver());
 
         var result = await handler.Handle(
             ValidCommand(),
@@ -268,7 +312,8 @@ public sealed class RegistrationCommandTests
             fixture.TenantContext,
             new PasswordHasher<User>(),
             provisioner,
-            TimeProvider.System);
+            TimeProvider.System,
+            new Application.SharedKernel.Services.TimeZoneResolver());
 
         var result = await handler.Handle(
             ValidCommand(),
@@ -568,7 +613,8 @@ public sealed class RegistrationCommandTests
                 "02100000000",
                 "business@example.com",
                 "Tehran",
-                "Business address"),
+                "Business address",
+                "Asia/Tehran"),
             new RegistrationOwner(
                 "Demo",
                 "Owner",
@@ -578,7 +624,8 @@ public sealed class RegistrationCommandTests
             new RegistrationBranch(
                 "Main Branch",
                 "02100000000",
-                "Branch address"));
+                "Branch address",
+                null));
 
     private static async Task<Fixture> CreateFixtureAsync()
     {

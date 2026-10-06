@@ -12,6 +12,7 @@ public sealed record BranchListItemDto(
     string Name,
     string? Phone,
     string? Address,
+    string TimeZoneId,
     bool IsMain,
     bool IsActive);
 
@@ -48,6 +49,7 @@ public sealed class BranchListQueryHandler(
                 x.Name,
                 x.Phone,
                 x.Address,
+                x.TimeZoneId,
                 x.IsMain,
                 x.IsActive))
             .ToListAsync(cancellationToken);
@@ -62,6 +64,7 @@ public sealed record BranchDetailsDto(
     string Name,
     string? Phone,
     string? Address,
+    string TimeZoneId,
     bool IsMain,
     bool IsActive);
 
@@ -91,6 +94,7 @@ public sealed class BranchGetByIdQueryHandler(
                 x.Name,
                 x.Phone,
                 x.Address,
+                x.TimeZoneId,
                 x.IsMain,
                 x.IsActive))
             .SingleOrDefaultAsync(cancellationToken);

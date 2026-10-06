@@ -50,6 +50,9 @@ namespace Modules.System.Appointments.Migrations
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("time");
 
+                    b.Property<DateTimeOffset>("EndUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset?>("LastModifiedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -83,6 +86,14 @@ namespace Modules.System.Appointments.Migrations
                     b.Property<TimeOnly>("StartTime")
                         .HasColumnType("time");
 
+                    b.Property<DateTimeOffset>("StartUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -94,8 +105,8 @@ namespace Modules.System.Appointments.Migrations
                     b.HasIndex("CreatedAt").IsDescending();
                     b.HasIndex("TenantId", "BranchId", "Date");
                     b.HasIndex("TenantId", "CustomerId", "Date");
-                    b.HasIndex("TenantId", "StaffId", "Date", "StartTime", "EndTime")
-                        .HasDatabaseName("IX_Appointments_Tenant_Staff_Date_Time");
+                    b.HasIndex("TenantId", "StaffId", "Date", "StartUtc", "EndUtc")
+                        .HasDatabaseName("IX_Appointments_Tenant_Staff_Date_UtcTime");
 
                     b.ToTable("Appointments", t =>
                         {
@@ -110,6 +121,10 @@ namespace Modules.System.Appointments.Migrations
                             t.HasCheckConstraint(
                                 "CK_Appointments_TimeRange",
                                 "[StartTime] < [EndTime]");
+
+                            t.HasCheckConstraint(
+                                "CK_Appointments_UtcTimeRange",
+                                "[StartUtc] < [EndUtc]");
                         });
                 });
 #pragma warning restore 612, 618

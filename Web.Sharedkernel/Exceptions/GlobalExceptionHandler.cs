@@ -23,6 +23,14 @@ public sealed class GlobalExceptionHandler(
                     "One or more validation errors occurred.",
                     validationException.Errors)),
 
+            StaffBookingConcurrencyException concurrencyException => (
+                StatusCodes.Status409Conflict,
+                ApiResponse.Fail(
+                    concurrencyException.Code,
+                    concurrencyException.Code == "appointment.conflict"
+                        ? "The selected time is no longer available. Please choose another time."
+                        : "The booking state changed concurrently. Please retry.")),
+
             TenantAccessException tenantException => (
                 StatusCodes.Status403Forbidden,
                 ApiResponse.Fail(

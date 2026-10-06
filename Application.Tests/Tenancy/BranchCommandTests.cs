@@ -23,7 +23,8 @@ public sealed class BranchCommandTests
             new BranchCreateCommandHandler(
                 fixture.Db,
                 fixture.TenantContext,
-                fixture.TenantAuthorization);
+                fixture.TenantAuthorization,
+                new Application.SharedKernel.Services.TimeZoneResolver());
 
         var branchId = await handler.Handle(
             new BranchCreateCommand(
@@ -63,7 +64,8 @@ public sealed class BranchCommandTests
                 fixture.TenantContext,
                 new StubAuthorizationService(
                     PermissionScopeType.Branch,
-                    Guid.NewGuid()));
+                    Guid.NewGuid()),
+                new Application.SharedKernel.Services.TimeZoneResolver());
 
         await Assert.ThrowsAsync<ForbiddenAccessException>(
             () => handler.Handle(
@@ -158,7 +160,8 @@ public sealed class BranchCommandTests
                 fixture.TenantContext,
                 new StubAuthorizationService(
                     PermissionScopeType.Branch,
-                    branchA.Id));
+                    branchA.Id),
+                new Application.SharedKernel.Services.TimeZoneResolver());
 
         await Assert.ThrowsAsync<ForbiddenAccessException>(
             () => handler.Handle(
@@ -200,7 +203,8 @@ public sealed class BranchCommandTests
                 fixture.TenantContext,
                 new StubAuthorizationService(
                     PermissionScopeType.Branch,
-                    branch.Id));
+                    branch.Id),
+                new Application.SharedKernel.Services.TimeZoneResolver());
 
         await Assert.ThrowsAsync<ForbiddenAccessException>(
             () => handler.Handle(

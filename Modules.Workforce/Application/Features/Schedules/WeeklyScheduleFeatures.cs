@@ -247,7 +247,8 @@ public sealed class ReplaceStaffWeeklyScheduleCommandValidator
 public sealed class ReplaceStaffWeeklyScheduleCommandHandler(
     IWorkforceDbContext db,
     ICurrentTenant currentTenant,
-    IPermissionAuthorizationService authorizationService)
+    IPermissionAuthorizationService authorizationService,
+    IStaffBookingConcurrencyGuard concurrencyGuard)
     : ICommandHandler<ReplaceStaffWeeklyScheduleCommand>
 {
     public async Task Handle(
@@ -275,6 +276,20 @@ public sealed class ReplaceStaffWeeklyScheduleCommandHandler(
             staff.UserId,
             SystemPermissionCatalog.Staff.UpdateSchedule,
             cancellationToken);
+
+        await using var transaction =
+            await db.Database.BeginTransactionAsync(
+                cancellationToken);
+
+        var staffLocked =
+            await concurrencyGuard.TryAcquireAsync(
+                db.Database,
+                tenantId,
+                command.StaffId,
+                cancellationToken);
+
+        if (!staffLocked)
+            throw new KeyNotFoundException("Staff not found.");
 
         var requestedDays =
             (command.Days ?? [])
@@ -345,6 +360,8 @@ public sealed class ReplaceStaffWeeklyScheduleCommandHandler(
 
         await db.SaveChangesAsync(
             cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
     }
 
     private static void SynchronizeBreaks(

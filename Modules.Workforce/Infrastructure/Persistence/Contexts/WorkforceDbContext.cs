@@ -17,6 +17,9 @@ public class WorkforceDbContext(
     public DbSet<StaffScheduleBreak> StaffScheduleBreaks =>
         Set<StaffScheduleBreak>();
 
+    public new Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database =>
+        base.Database;
+
     private bool FilterDisabled =>
         currentTenant.IsFilterDisabled;
 

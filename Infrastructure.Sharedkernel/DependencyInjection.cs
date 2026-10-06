@@ -1,4 +1,6 @@
-﻿using Infrastructure.SharedKernel.Persistence.Interceptors;
+﻿using Application.SharedKernel.Abstractions;
+using Infrastructure.SharedKernel.Concurrency;
+using Infrastructure.SharedKernel.Persistence.Interceptors;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -13,7 +15,7 @@ namespace Infrastructure.SharedKernel
     {
         public static void AddBaseInfrastructureServices<TDbContext>(this IServiceCollection services, IConfiguration configuration,string appName, Action<IServiceProvider,DbContextOptionsBuilder>? configureOptions = null) where TDbContext : DbContext
         {
-
+            services.TryAddScoped<IStaffBookingConcurrencyGuard, SqlServerStaffBookingConcurrencyGuard>();
 
             var DBNAME = configuration["DBNAME"];
             
