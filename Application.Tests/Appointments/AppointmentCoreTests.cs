@@ -111,6 +111,20 @@ public sealed class AppointmentCoreTests
         Assert.Equal(
             AppointmentStatus.Confirmed,
             appointment.Status);
+
+        Assert.Equal(
+            "Asia/Tehran",
+            appointment.TimeZoneId);
+
+        Assert.Equal(
+            new DateTimeOffset(
+                2026, 10, 10, 5, 30, 0, TimeSpan.Zero),
+            appointment.StartUtc);
+
+        Assert.Equal(
+            new DateTimeOffset(
+                2026, 10, 10, 6, 30, 0, TimeSpan.Zero),
+            appointment.EndUtc);
     }
 
     [Fact]
@@ -214,6 +228,39 @@ public sealed class AppointmentCoreTests
     }
 
     [Fact]
+    public async Task NoShowAppointment_DoesNotBlockSlot()
+    {
+        await using var fixture =
+            await Fixture.CreateAsync();
+
+        fixture.Appointments.Appointments.Add(
+            new Appointment(
+                fixture.TenantId,
+                fixture.BranchId,
+                fixture.CustomerId,
+                fixture.StaffId,
+                fixture.ServiceId,
+                fixture.Date,
+                new TimeOnly(9, 0),
+                new TimeOnly(10, 0),
+                new DateTimeOffset(
+                    2026, 10, 10, 5, 30, 0, TimeSpan.Zero),
+                new DateTimeOffset(
+                    2026, 10, 10, 6, 30, 0, TimeSpan.Zero),
+                "Asia/Tehran",
+                500_000m,
+                status: AppointmentStatus.NoShow));
+
+        await fixture.Appointments.SaveChangesAsync();
+
+        var result = await fixture.CreateAsync(
+            fixture.StaffId,
+            new TimeOnly(9, 0));
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
     public async Task StaffMustBelongToBranchAndOfferService()
     {
         await using var fixture =
@@ -287,6 +334,11 @@ public sealed class AppointmentCoreTests
             new DateOnly(2026, 10, 10),
             new TimeOnly(9, 0),
             new TimeOnly(10, 0),
+            new DateTimeOffset(
+                2026, 10, 10, 9, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(
+                2026, 10, 10, 10, 0, 0, TimeSpan.Zero),
+            "Etc/UTC",
             100,
             status: status);
 
@@ -411,6 +463,7 @@ public sealed class AppointmentCoreTests
             {
                 Name = "Tenant",
                 Slug = $"tenant-{tenantId:N}",
+                DefaultTimeZoneId = "Asia/Tehran",
                 IsActive = true
             };
 
@@ -418,7 +471,8 @@ public sealed class AppointmentCoreTests
                 tenantId,
                 "Main",
                 isMain: true,
-                isActive: true);
+                isActive: true,
+                timeZoneId: "Asia/Tehran");
 
             identity.Tenants.Add(tenant);
             identity.Branches.Add(branch);
