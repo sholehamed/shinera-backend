@@ -211,6 +211,46 @@ public sealed class RegistrationCommandTests
     }
 
     [Fact]
+    public async Task Register_InvalidTenantTimeZone_ReturnsValidationFailure()
+    {
+        await using var fixture = await CreateFixtureAsync();
+
+        var provisioner = new StubSubscriptionProvisioner(
+            Result<RegistrationSubscriptionReceipt>.Success(
+                new RegistrationSubscriptionReceipt(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    "salon-pro")));
+
+        var handler = new RegisterWorkspaceCommandHandler(
+            fixture.Db,
+            fixture.TenantContext,
+            new PasswordHasher<User>(),
+            provisioner,
+            TimeProvider.System,
+            new Application.SharedKernel.Services.TimeZoneResolver());
+
+        var command = ValidCommand();
+        command = command with
+        {
+            Business = command.Business! with
+            {
+                DefaultTimeZoneId = "Invalid/Zone"
+            }
+        };
+
+        var result = await handler.Handle(
+            command,
+            CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(
+            "registration.timezone_invalid",
+            result.Error.Code);
+        Assert.False(provisioner.WasCalled);
+    }
+
+    [Fact]
     public async Task Register_WhenOwnerEmailAlreadyExists_ReturnsConflict()
     {
         await using var fixture = await CreateFixtureAsync();
