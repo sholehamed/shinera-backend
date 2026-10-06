@@ -122,13 +122,13 @@ public sealed class BranchUpdateCommandHandler(
             : value.Trim();
 }
 
-public sealed record BranchDisableCommand(Guid Id) : ICommand;
+public sealed record BranchDisableCommand(Guid Id) : ICommand<Result>;
 
 public sealed class BranchDisableCommandHandler(
     IIdentityDbContext db)
-    : ICommandHandler<BranchDisableCommand>
+    : ICommandHandler<BranchDisableCommand, Result>
 {
-    public async Task Handle(
+    public async Task<Result> Handle(
         BranchDisableCommand command,
         CancellationToken cancellationToken)
     {
@@ -141,26 +141,29 @@ public sealed class BranchDisableCommandHandler(
 
         if (branch.IsMain)
         {
-            throw new BusinessRuleException(
-                "branch.main_disable_forbidden",
-                "The main branch cannot be disabled. Select another main branch first.");
+            return Result.Failure(
+                Error.Conflict(
+                    "branch.main_disable_forbidden",
+                    "The main branch cannot be disabled. Select another main branch first."));
         }
 
         if (!branch.IsActive)
-            return;
+            return Result.Success();
 
         branch.IsActive = false;
         await db.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
     }
 }
 
-public sealed record SetMainBranchCommand(Guid BranchId) : ICommand;
+public sealed record SetMainBranchCommand(Guid BranchId) : ICommand<Result>;
 
 public sealed class SetMainBranchCommandHandler(
     IIdentityDbContext db)
-    : ICommandHandler<SetMainBranchCommand>
+    : ICommandHandler<SetMainBranchCommand, Result>
 {
-    public async Task Handle(
+    public async Task<Result> Handle(
         SetMainBranchCommand command,
         CancellationToken cancellationToken)
     {
@@ -173,13 +176,14 @@ public sealed class SetMainBranchCommandHandler(
 
         if (!target.IsActive)
         {
-            throw new BusinessRuleException(
-                "branch.inactive_main_forbidden",
-                "An inactive branch cannot become the main branch.");
+            return Result.Failure(
+                Error.Conflict(
+                    "branch.inactive_main_forbidden",
+                    "An inactive branch cannot become the main branch."));
         }
 
         if (target.IsMain)
-            return;
+            return Result.Success();
 
         await using var transaction =
             await db.Database.BeginTransactionAsync(cancellationToken);
@@ -199,5 +203,7 @@ public sealed class SetMainBranchCommandHandler(
         await db.SaveChangesAsync(cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
+
+        return Result.Success();
     }
 }

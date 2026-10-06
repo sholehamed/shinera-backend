@@ -2,6 +2,7 @@ using Modules.System.Identity.Application.Authorization;
 using Modules.System.Identity.Application.Features.Branches.Commands;
 using Modules.System.Identity.Application.Features.Branches.Queries;
 using Web.SharedKernel.Authorization;
+using Web.SharedKernel.Models;
 
 namespace Modules.System.Identity.Web.Endpoints;
 
@@ -106,26 +107,42 @@ public sealed class Branches : EndpointGroupBase
         return TypedResults.NoContent();
     }
 
-    public async Task<NoContent> Disable(
+    public async Task<Results<NoContent, Conflict<ApiResponse>>> Disable(
         IDispatcher dispatcher,
         Guid id,
         CancellationToken cancellationToken)
     {
-        await dispatcher.Send(
+        var result = await dispatcher.Send(
             new BranchDisableCommand(id),
             cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return TypedResults.Conflict(
+                ApiResponse.Fail(
+                    result.Error.Code,
+                    result.Error.Message));
+        }
 
         return TypedResults.NoContent();
     }
 
-    public async Task<NoContent> SetMain(
+    public async Task<Results<NoContent, Conflict<ApiResponse>>> SetMain(
         IDispatcher dispatcher,
         Guid id,
         CancellationToken cancellationToken)
     {
-        await dispatcher.Send(
+        var result = await dispatcher.Send(
             new SetMainBranchCommand(id),
             cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return TypedResults.Conflict(
+                ApiResponse.Fail(
+                    result.Error.Code,
+                    result.Error.Message));
+        }
 
         return TypedResults.NoContent();
     }

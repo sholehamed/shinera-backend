@@ -23,12 +23,6 @@ public sealed class GlobalExceptionHandler(
                     "One or more validation errors occurred.",
                     validationException.Errors)),
 
-            BusinessRuleException businessRuleException => (
-                StatusCodes.Status409Conflict,
-                ApiResponse.Fail(
-                    businessRuleException.Code,
-                    businessRuleException.Message)),
-
             TenantAccessException tenantException => (
                 StatusCodes.Status403Forbidden,
                 ApiResponse.Fail(
