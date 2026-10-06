@@ -26,6 +26,9 @@ public sealed class Appointment : AuditableEntity, IMustHaveTenant
         DateOnly date,
         TimeOnly startTime,
         TimeOnly endTime,
+        DateTimeOffset startUtc,
+        DateTimeOffset endUtc,
+        string timeZoneId,
         decimal price,
         string? notes = null,
         AppointmentStatus status = AppointmentStatus.Confirmed)
@@ -39,6 +42,9 @@ public sealed class Appointment : AuditableEntity, IMustHaveTenant
         Date = date;
         StartTime = startTime;
         EndTime = endTime;
+        StartUtc = startUtc.ToUniversalTime();
+        EndUtc = endUtc.ToUniversalTime();
+        TimeZoneId = timeZoneId.Trim();
         Price = price;
         Notes = Normalize(notes);
         Status = status;
@@ -52,6 +58,9 @@ public sealed class Appointment : AuditableEntity, IMustHaveTenant
     public DateOnly Date { get; set; }
     public TimeOnly StartTime { get; set; }
     public TimeOnly EndTime { get; set; }
+    public DateTimeOffset StartUtc { get; set; }
+    public DateTimeOffset EndUtc { get; set; }
+    public string TimeZoneId { get; set; } = "Etc/UTC";
     public decimal Price { get; set; }
     public AppointmentStatus Status { get; private set; }
     public string? Notes { get; set; }
