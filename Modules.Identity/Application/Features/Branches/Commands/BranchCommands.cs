@@ -1,0 +1,203 @@
+using Application.SharedKernel.Exceptions;
+using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Domain.Entities;
+
+namespace Modules.System.Identity.Application.Features.Branches.Commands;
+
+public sealed record BranchCreateCommand(
+    string Name,
+    string? Phone,
+    string? Address) : ICommand<Guid>;
+
+public sealed class BranchCreateCommandValidator
+    : AbstractValidator<BranchCreateCommand>
+{
+    public BranchCreateCommandValidator()
+    {
+        RuleFor(x => x.Name)
+            .NotEmpty()
+            .MaximumLength(200);
+
+        RuleFor(x => x.Phone)
+            .MaximumLength(32);
+
+        RuleFor(x => x.Address)
+            .MaximumLength(500);
+    }
+}
+
+public sealed class BranchCreateCommandHandler(
+    IIdentityDbContext db,
+    ITenantContext tenantContext)
+    : ICommandHandler<BranchCreateCommand, Guid>
+{
+    public async Task<Guid> Handle(
+        BranchCreateCommand command,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = tenantContext.ActiveTenantId
+            ?? throw new TenantAccessException(
+                "tenant.context_missing",
+                "A tenant context is required for this operation.");
+
+        var userId = tenantContext.UserId
+            ?? throw new TenantAccessException(
+                "tenant.user_context_invalid",
+                "The authenticated user context is invalid.");
+
+        var branch = new Branch(
+            tenantId,
+            command.Name.Trim(),
+            Normalize(command.Phone),
+            Normalize(command.Address));
+
+        db.Branches.Add(branch);
+        db.BranchMemberships.Add(
+            new BranchMembership(
+                tenantId,
+                branch.Id,
+                userId));
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return branch.Id;
+    }
+
+    private static string? Normalize(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim();
+}
+
+public sealed record BranchUpdateCommand(
+    Guid Id,
+    string Name,
+    string? Phone,
+    string? Address) : ICommand;
+
+public sealed class BranchUpdateCommandValidator
+    : AbstractValidator<BranchUpdateCommand>
+{
+    public BranchUpdateCommandValidator()
+    {
+        RuleFor(x => x.Id).NotEmpty();
+
+        RuleFor(x => x.Name)
+            .NotEmpty()
+            .MaximumLength(200);
+
+        RuleFor(x => x.Phone)
+            .MaximumLength(32);
+
+        RuleFor(x => x.Address)
+            .MaximumLength(500);
+    }
+}
+
+public sealed class BranchUpdateCommandHandler(
+    IIdentityDbContext db)
+    : ICommandHandler<BranchUpdateCommand>
+{
+    public async Task Handle(
+        BranchUpdateCommand command,
+        CancellationToken cancellationToken)
+    {
+        var branch = await db.Branches
+            .SingleOrDefaultAsync(
+                x => x.Id == command.Id,
+                cancellationToken);
+
+        Guard.Against.NotFound(command.Id, branch);
+
+        branch.Name = command.Name.Trim();
+        branch.Phone = Normalize(command.Phone);
+        branch.Address = Normalize(command.Address);
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string? Normalize(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim();
+}
+
+public sealed record BranchDisableCommand(Guid Id) : ICommand;
+
+public sealed class BranchDisableCommandHandler(
+    IIdentityDbContext db)
+    : ICommandHandler<BranchDisableCommand>
+{
+    public async Task Handle(
+        BranchDisableCommand command,
+        CancellationToken cancellationToken)
+    {
+        var branch = await db.Branches
+            .SingleOrDefaultAsync(
+                x => x.Id == command.Id,
+                cancellationToken);
+
+        Guard.Against.NotFound(command.Id, branch);
+
+        if (branch.IsMain)
+        {
+            throw new BusinessRuleException(
+                "branch.main_disable_forbidden",
+                "The main branch cannot be disabled. Select another main branch first.");
+        }
+
+        if (!branch.IsActive)
+            return;
+
+        branch.IsActive = false;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed record SetMainBranchCommand(Guid BranchId) : ICommand;
+
+public sealed class SetMainBranchCommandHandler(
+    IIdentityDbContext db)
+    : ICommandHandler<SetMainBranchCommand>
+{
+    public async Task Handle(
+        SetMainBranchCommand command,
+        CancellationToken cancellationToken)
+    {
+        var target = await db.Branches
+            .SingleOrDefaultAsync(
+                x => x.Id == command.BranchId,
+                cancellationToken);
+
+        Guard.Against.NotFound(command.BranchId, target);
+
+        if (!target.IsActive)
+        {
+            throw new BusinessRuleException(
+                "branch.inactive_main_forbidden",
+                "An inactive branch cannot become the main branch.");
+        }
+
+        if (target.IsMain)
+            return;
+
+        await using var transaction =
+            await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var currentMain = await db.Branches
+            .SingleOrDefaultAsync(
+                x => x.IsMain,
+                cancellationToken);
+
+        if (currentMain is not null)
+        {
+            currentMain.IsMain = false;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        target.IsMain = true;
+        await db.SaveChangesAsync(cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+    }
+}
