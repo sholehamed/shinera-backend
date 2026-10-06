@@ -14,6 +14,7 @@
     <ProjectReference Include="..\Modules.Services\Modules.Services.csproj" />
     <ProjectReference Include="..\Modules.Workforce\Modules.Workforce.csproj" />
     <ProjectReference Include="..\Modules.Crm\Modules.Crm.csproj" />
+    <ProjectReference Include="..\Modules.Appointments\Modules.Appointments.csproj" />
   </ItemGroup>
 
 </Project>
