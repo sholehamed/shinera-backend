@@ -11,6 +11,9 @@ namespace Modules.System.Identity.Infrastructure.Persistence.Configurations
             builder.HasIndex(x => x.Slug).IsUnique();
             builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
             builder.Property(x => x.Slug).HasMaxLength(100).IsRequired();
+            builder.Property(x => x.DefaultTimeZoneId)
+                .HasMaxLength(128)
+                .IsRequired();
             base.Configure(builder);
         }
     }
