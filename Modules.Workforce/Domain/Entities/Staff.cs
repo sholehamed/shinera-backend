@@ -34,6 +34,7 @@ public sealed class Staff : AuditableEntity, IMustHaveTenant
 
     public ICollection<StaffBranch> Branches { get; set; } = [];
     public ICollection<StaffService> Services { get; set; } = [];
+    public ICollection<StaffWeeklyScheduleDay> WeeklySchedule { get; set; } = [];
 
     public void Update(
         string firstName,

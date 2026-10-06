@@ -12,6 +12,10 @@ public class WorkforceDbContext(
     public DbSet<Staff> Staff => Set<Staff>();
     public DbSet<StaffBranch> StaffBranches => Set<StaffBranch>();
     public DbSet<StaffService> StaffServices => Set<StaffService>();
+    public DbSet<StaffWeeklyScheduleDay> StaffWeeklyScheduleDays =>
+        Set<StaffWeeklyScheduleDay>();
+    public DbSet<StaffScheduleBreak> StaffScheduleBreaks =>
+        Set<StaffScheduleBreak>();
 
     private bool FilterDisabled =>
         currentTenant.IsFilterDisabled;
@@ -47,5 +51,19 @@ public class WorkforceDbContext(
                 link =>
                     FilterDisabled ||
                     link.TenantId == CurrentTenantId);
+
+        builder.Entity<StaffWeeklyScheduleDay>()
+            .HasQueryFilter(
+                "tenant",
+                day =>
+                    FilterDisabled ||
+                    day.TenantId == CurrentTenantId);
+
+        builder.Entity<StaffScheduleBreak>()
+            .HasQueryFilter(
+                "tenant",
+                scheduleBreak =>
+                    FilterDisabled ||
+                    scheduleBreak.TenantId == CurrentTenantId);
     }
 }

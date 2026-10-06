@@ -7,4 +7,6 @@ public interface IWorkforceDbContext : IBaseDbContext
     DbSet<Staff> Staff { get; }
     DbSet<StaffBranch> StaffBranches { get; }
     DbSet<StaffService> StaffServices { get; }
+    DbSet<StaffWeeklyScheduleDay> StaffWeeklyScheduleDays { get; }
+    DbSet<StaffScheduleBreak> StaffScheduleBreaks { get; }
 }
