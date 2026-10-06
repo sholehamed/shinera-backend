@@ -118,6 +118,7 @@ public sealed class BranchUpdateCommandHandler(
             tenantContext,
             SystemPermissionCatalog.Branches.Update,
             command.Id,
+            requireWriteAccess: true,
             cancellationToken);
 
         var branch = await db.Branches

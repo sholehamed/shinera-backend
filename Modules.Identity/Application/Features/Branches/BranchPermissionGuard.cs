@@ -36,6 +36,7 @@ internal static class BranchPermissionGuard
         ITenantContext tenantContext,
         string action,
         Guid branchId,
+        bool requireWriteAccess,
         CancellationToken cancellationToken)
     {
         var userId = GetUserId(tenantContext);
@@ -47,7 +48,10 @@ internal static class BranchPermissionGuard
             new PermissionScopeContext(
                 BranchId: branchId,
                 BranchAccessValidated:
-                    tenantContext.ReadableBranchIds.Contains(branchId)),
+                    (requireWriteAccess
+                        ? tenantContext.WritableBranchIds
+                        : tenantContext.ReadableBranchIds)
+                    .Contains(branchId)),
             cancellationToken);
 
         if (!decision.IsAllowed)
