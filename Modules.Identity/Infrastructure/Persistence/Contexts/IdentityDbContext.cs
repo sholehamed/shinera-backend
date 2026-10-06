@@ -11,6 +11,7 @@ public class IdentityDbContext(
     ITenantContext tenantContext)
     : BaseDbContext(options), IIdentityDbContext
 {
+    public DbSet<BusinessProfile> BusinessProfiles => Set<BusinessProfile>();
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<BranchMembership> BranchMemberships => Set<BranchMembership>();
     public DbSet<Group> Groups => Set<Group>();

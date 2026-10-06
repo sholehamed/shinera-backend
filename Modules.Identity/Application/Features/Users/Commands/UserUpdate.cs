@@ -19,14 +19,35 @@ namespace Modules.System.Identity.Application.Features.Users.Commands
         {
 
             profile.CreateMap<UserUpdateCommand, User>()
-                .ForMember(x=>x.ImageId,opt=>opt.MapFrom(x=>x.Avatar))
-                .ForMember(x => x.NormalizedEmail, opt => opt.MapFrom(x => x.Email.ToUpper()))
-                .ForMember(x => x.NormalizedUserName, opt => opt.MapFrom(x => x.Username.ToLower()));
+                .ForMember(x => x.ImageId, opt => opt.MapFrom(x => x.Avatar))
+                .ForMember(x => x.UserName, opt => opt.MapFrom(x => x.Username.Trim()))
+                .ForMember(x => x.Email, opt => opt.MapFrom(x => x.Email.Trim()))
+                .ForMember(
+                    x => x.NormalizedEmail,
+                    opt => opt.MapFrom(
+                        x => x.Email.Trim().ToUpperInvariant()))
+                .ForMember(
+                    x => x.NormalizedUserName,
+                    opt => opt.MapFrom(
+                        x => x.Username.Trim().ToUpperInvariant()));
         }
     }
-    public class UserUpdateCommandValidator : AbstractValidator<UserUpdateCommand>
+    public sealed class UserUpdateCommandValidator : AbstractValidator<UserUpdateCommand>
     {
-
+        public UserUpdateCommandValidator(IIdentityDbContext dbContext)
+        {
+            RuleFor(x => x.Email)
+                .NotEmpty()
+                .EmailAddress()
+                .MustAsync(async (command, email, cancellationToken) =>
+                    !await dbContext.Users.AnyAsync(
+                        user =>
+                            user.Id != command.Id &&
+                            user.NormalizedEmail ==
+                                email.Trim().ToUpperInvariant(),
+                        cancellationToken))
+                .WithMessage("Email is already in use.");
+        }
     }
     public class UserUpdateCommandHandler(IMapper mapper, IIdentityDbContext context, IPasswordHasher<User> passwordHasher) : ICommandHandler<UserUpdateCommand, Guid>
     {

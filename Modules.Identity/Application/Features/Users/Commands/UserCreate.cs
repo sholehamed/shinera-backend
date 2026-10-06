@@ -41,7 +41,7 @@ public sealed class UserCreateCommandValidator : AbstractValidator<UserCreateCom
             .NotEmpty()
             .EmailAddress()
             .MustAsync(async (email, cancellationToken) =>
-                !await dbContext.CurrentTenantUsers().AnyAsync(
+                !await dbContext.Users.AnyAsync(
                     user => user.NormalizedEmail == email.Trim().ToUpperInvariant(),
                     cancellationToken))
             .WithMessage("Email is already in use.");

@@ -14,6 +14,7 @@ public sealed class EndpointAuthorizationMetadataTests(
     [
         "/System/Tenants",
         "/System/Branches",
+        "/System/BusinessProfiles",
         "/System/Modules",
         "/System/Resources",
         "/System/Users",
@@ -63,6 +64,21 @@ public sealed class EndpointAuthorizationMetadataTests(
                 isAnonymous || hasAuthorization,
                 $"Endpoint '{route}' has neither explicit anonymous nor authorization metadata.");
         }
+    }
+
+    [Fact]
+    public void RegistrationEndpoint_IsExplicitlyAnonymous()
+    {
+        using var client = factory.CreateClient();
+
+        var endpoint = GetRouteEndpoints()
+            .Single(x =>
+                NormalizeRoute(x).Equals(
+                    "/System/Registration",
+                    StringComparison.OrdinalIgnoreCase));
+
+        Assert.NotNull(
+            endpoint.Metadata.GetMetadata<IAllowAnonymous>());
     }
 
     [Fact]
@@ -125,6 +141,9 @@ public sealed class EndpointAuthorizationMetadataTests(
     {
         var raw = endpoint.RoutePattern.RawText ?? string.Empty;
 
-        return "/" + raw.TrimStart('/');
+        var normalized = "/" + raw.TrimStart('/');
+        return normalized.Length > 1
+            ? normalized.TrimEnd('/')
+            : normalized;
     }
 }

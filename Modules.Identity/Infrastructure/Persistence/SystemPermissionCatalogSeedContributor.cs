@@ -32,6 +32,13 @@ public sealed class SystemPermissionCatalogSeedContributor
                 SystemPermissionCatalog.Branches.SetMain
             ]),
         new(
+            SystemPermissionCatalog.BusinessProfile.Resource,
+            "Business Profile",
+            [
+                SystemPermissionCatalog.BusinessProfile.View,
+                SystemPermissionCatalog.BusinessProfile.Update
+            ]),
+        new(
             SystemPermissionCatalog.Modules.Resource,
             "Modules",
             [
