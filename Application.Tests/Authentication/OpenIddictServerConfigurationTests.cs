@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Modules.System.Identity;
 using OpenIddict.Abstractions;
@@ -23,7 +25,10 @@ public sealed class OpenIddictServerConfigurationTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddHttpContextAccessor();
-        services.AddIdentityModule(configuration);
+        services.AddIdentityModule(
+            configuration,
+            new TestHostEnvironment(
+                Environments.Development));
 
         using var provider = services.BuildServiceProvider();
 
@@ -70,5 +75,48 @@ public sealed class OpenIddictServerConfigurationTests
         Assert.Contains(
             options.EndSessionEndpointUris,
             uri => uri.OriginalString == "/connect/logout");
+    }
+
+    [Fact]
+    public void Production_WithoutDurableCertificates_FailsFast()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["DBNAME"] = "shinera-tests"
+                })
+            .Build();
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddHttpContextAccessor();
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddIdentityModule(
+                configuration,
+                new TestHostEnvironment(
+                    Environments.Production)));
+
+        Assert.Contains(
+            "SigningCertificate:Path",
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    private sealed class TestHostEnvironment(
+        string environmentName) : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } =
+            environmentName;
+
+        public string ApplicationName { get; set; } =
+            "Application.Tests";
+
+        public string ContentRootPath { get; set; } =
+            AppContext.BaseDirectory;
+
+        public IFileProvider ContentRootFileProvider { get; set; } =
+            new NullFileProvider();
     }
 }
