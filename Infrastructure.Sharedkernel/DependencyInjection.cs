@@ -34,8 +34,8 @@ public static class DependencyInjection
         services.TryAddScoped<SqlConnection>(
             _ => new SqlConnection(connectionString));
 
-        services.TryAddScoped<IDbConnection>(
-            provider => provider.GetRequiredService<SqlConnection>());
+        services.AddTransient<IDbConnection>(
+            _ => new SqlConnection(connectionString));
 
         services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
         services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();
