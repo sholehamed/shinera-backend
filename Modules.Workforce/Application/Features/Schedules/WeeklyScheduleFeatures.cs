@@ -68,7 +68,6 @@ public sealed class StaffWeeklyScheduleQueryHandler(
         var days = await db.StaffWeeklyScheduleDays
             .AsNoTracking()
             .Where(x => x.StaffId == query.StaffId)
-            .OrderBy(x => x.DayOfWeek)
             .Select(x => new StaffScheduleDayDto(
                 x.DayOfWeek,
                 x.IsDayOff,
@@ -86,7 +85,24 @@ public sealed class StaffWeeklyScheduleQueryHandler(
 
         return new StaffWeeklyScheduleDto(
             query.StaffId,
-            days);
+            days
+                .OrderBy(DayDisplayOrder)
+                .ToArray());
+    }
+
+    private static int DayDisplayOrder(
+        StaffScheduleDayDto day) =>
+        day.DayOfWeek switch
+        {
+            DayOfWeek.Saturday => 0,
+            DayOfWeek.Sunday => 1,
+            DayOfWeek.Monday => 2,
+            DayOfWeek.Tuesday => 3,
+            DayOfWeek.Wednesday => 4,
+            DayOfWeek.Thursday => 5,
+            DayOfWeek.Friday => 6,
+            _ => 99
+        };
     }
 }
 
@@ -105,12 +121,25 @@ public sealed class ReplaceStaffWeeklyScheduleCommandValidator
 
         RuleFor(x => x.Days)
             .NotNull()
-            .Must(days => days is null || days.Count <= 7)
+            .Must(days => days is not null && days.Count == 7)
             .WithMessage(
-                "A weekly schedule cannot contain more than seven days.");
+                "A complete weekly schedule must contain exactly seven days.")
+            .Must(HaveEveryDayExactlyOnce)
+            .WithMessage(
+                "Each day of the week must appear exactly once.");
 
         RuleFor(x => x.Days)
             .Custom(ValidateDays);
+    }
+
+    private static bool HaveEveryDayExactlyOnce(
+        IReadOnlyCollection<StaffScheduleDayInput>? days)
+    {
+        if (days is null || days.Count != 7)
+            return false;
+
+        return days.All(x => Enum.IsDefined(x.DayOfWeek))
+            && days.Select(x => x.DayOfWeek).Distinct().Count() == 7;
     }
 
     private static void ValidateDays(
@@ -121,19 +150,6 @@ public sealed class ReplaceStaffWeeklyScheduleCommandValidator
             return;
 
         var materialized = days.ToArray();
-
-        var duplicateDays = materialized
-            .GroupBy(x => x.DayOfWeek)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .ToArray();
-
-        if (duplicateDays.Length > 0)
-        {
-            context.AddFailure(
-                nameof(ReplaceStaffWeeklyScheduleCommand.Days),
-                "Each day of week can appear only once.");
-        }
 
         for (var index = 0; index < materialized.Length; index++)
         {
