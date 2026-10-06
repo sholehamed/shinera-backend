@@ -24,4 +24,12 @@ public sealed class StaffScheduleBreak : AuditableEntity, IMustHaveTenant
     public TimeOnly EndTime { get; set; }
 
     public StaffWeeklyScheduleDay ScheduleDay { get; set; } = default!;
+
+    public void Configure(
+        TimeOnly startTime,
+        TimeOnly endTime)
+    {
+        StartTime = startTime;
+        EndTime = endTime;
+    }
 }
