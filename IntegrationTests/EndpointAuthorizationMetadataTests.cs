@@ -141,6 +141,9 @@ public sealed class EndpointAuthorizationMetadataTests(
     {
         var raw = endpoint.RoutePattern.RawText ?? string.Empty;
 
-        return "/" + raw.TrimStart('/');
+        var normalized = "/" + raw.TrimStart('/');
+        return normalized.Length > 1
+            ? normalized.TrimEnd('/')
+            : normalized;
     }
 }
