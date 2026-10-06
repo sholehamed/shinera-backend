@@ -299,11 +299,6 @@ public sealed class RegistrationCommandTests
                 .UseSqlite(connection)
                 .Options;
 
-        var subscriptionOptions =
-            new DbContextOptionsBuilder<SubscriptionDbContext>()
-                .UseSqlite(connection)
-                .Options;
-
         await using var identityDb =
             new RegistrationTestDbContext(
                 identityOptions,
@@ -311,22 +306,40 @@ public sealed class RegistrationCommandTests
 
         await identityDb.Database.EnsureCreatedAsync();
 
+        // Bootstrap the Subscription schema/catalog on the Identity
+        // connection, then use a different context connection below.
+        var bootstrapSubscriptionOptions =
+            new DbContextOptionsBuilder<SubscriptionDbContext>()
+                .UseSqlite(connection)
+                .Options;
+
+        await using (var bootstrapSubscriptionDb =
+            new RegistrationSubscriptionTestDbContext(
+                bootstrapSubscriptionOptions,
+                tenantContext))
+        {
+            var creator = bootstrapSubscriptionDb.Database
+                .GetService<IRelationalDatabaseCreator>();
+
+            await creator.CreateTablesAsync();
+
+            bootstrapSubscriptionDb.Plans.Add(
+                new Plan(
+                    "salon-pro",
+                    "Salon Pro"));
+
+            await bootstrapSubscriptionDb.SaveChangesAsync();
+        }
+
+        var isolatedSubscriptionOptions =
+            new DbContextOptionsBuilder<SubscriptionDbContext>()
+                .UseSqlite("Data Source=:memory:")
+                .Options;
+
         await using var subscriptionDb =
             new RegistrationSubscriptionTestDbContext(
-                subscriptionOptions,
+                isolatedSubscriptionOptions,
                 tenantContext);
-
-        var creator = subscriptionDb.Database
-            .GetService<IRelationalDatabaseCreator>();
-
-        await creator.CreateTablesAsync();
-
-        var plan = new Plan(
-            "salon-pro",
-            "Salon Pro");
-
-        subscriptionDb.Plans.Add(plan);
-        await subscriptionDb.SaveChangesAsync();
 
         var tenantId = Guid.NewGuid();
 
@@ -371,6 +384,8 @@ public sealed class RegistrationCommandTests
                     .AsNoTracking()
                     .AnyAsync(x => x.Id == tenantId));
 
+            // The provisioner rebound subscriptionDb to the Identity
+            // transaction connection, so this query checks the same database.
             Assert.False(
                 await subscriptionDb.Subscriptions
                     .IgnoreQueryFilters(["tenant"])
