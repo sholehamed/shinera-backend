@@ -26,9 +26,17 @@ public sealed class RegistrationSubscriptionProvisioner(
         // Registration is the only cross-module workflow that needs a shared
         // physical connection. Rebind this scoped context just for the
         // workflow, then enlist it before the first command executes.
-        db.Database.SetDbConnection(
-            transactionConnection,
-            contextOwnsConnection: false);
+        var currentConnection =
+            db.Database.GetDbConnection();
+
+        if (!ReferenceEquals(
+                currentConnection,
+                transactionConnection))
+        {
+            db.Database.SetDbConnection(
+                transactionConnection,
+                contextOwnsConnection: false);
+        }
 
         await db.Database.UseTransactionAsync(
             transaction,
