@@ -28,7 +28,7 @@ public sealed class RegistrationCommandTests
     public void UserUpdateMapping_NormalizesLoginIdentifiersConsistently()
     {
         var configuration = new MapperConfiguration(
-            cfg => new UserUpdateCommand().Mapping(cfg));
+            cfg => cfg.AddProfile<UserUpdateMappingProfile>());
 
         var mapper = configuration.CreateMapper();
 
@@ -770,6 +770,21 @@ public sealed class RegistrationCommandTests
                         ValueGenerated.Never;
                 }
             }
+        }
+    }
+
+    private sealed class UserUpdateMappingProfile : Profile
+    {
+        public UserUpdateMappingProfile()
+        {
+            new UserUpdateCommand
+            {
+                Username = string.Empty,
+                Password = string.Empty,
+                Firstname = string.Empty,
+                Lastname = string.Empty,
+                Email = string.Empty
+            }.Mapping(this);
         }
     }
 
