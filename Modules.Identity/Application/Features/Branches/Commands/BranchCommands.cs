@@ -1,5 +1,6 @@
 using Application.SharedKernel.Exceptions;
 using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Authorization;
 using Modules.System.Identity.Domain.Entities;
 
 namespace Modules.System.Identity.Application.Features.Branches.Commands;
@@ -28,13 +29,20 @@ public sealed class BranchCreateCommandValidator
 
 public sealed class BranchCreateCommandHandler(
     IIdentityDbContext db,
-    ITenantContext tenantContext)
+    ITenantContext tenantContext,
+    IPermissionAuthorizationService authorizationService)
     : ICommandHandler<BranchCreateCommand, Guid>
 {
     public async Task<Guid> Handle(
         BranchCreateCommand command,
         CancellationToken cancellationToken)
     {
+        await BranchPermissionGuard.RequireTenantScopeAsync(
+            authorizationService,
+            tenantContext,
+            SystemPermissionCatalog.Branches.Create,
+            cancellationToken);
+
         var tenantId = tenantContext.ActiveTenantId
             ?? throw new TenantAccessException(
                 "tenant.context_missing",
@@ -95,13 +103,22 @@ public sealed class BranchUpdateCommandValidator
 }
 
 public sealed class BranchUpdateCommandHandler(
-    IIdentityDbContext db)
+    IIdentityDbContext db,
+    ITenantContext tenantContext,
+    IPermissionAuthorizationService authorizationService)
     : ICommandHandler<BranchUpdateCommand>
 {
     public async Task Handle(
         BranchUpdateCommand command,
         CancellationToken cancellationToken)
     {
+        await BranchPermissionGuard.RequireBranchScopeAsync(
+            authorizationService,
+            tenantContext,
+            SystemPermissionCatalog.Branches.Update,
+            command.Id,
+            cancellationToken);
+
         var branch = await db.Branches
             .SingleOrDefaultAsync(
                 x => x.Id == command.Id,
@@ -125,13 +142,21 @@ public sealed class BranchUpdateCommandHandler(
 public sealed record BranchDisableCommand(Guid Id) : ICommand<Result>;
 
 public sealed class BranchDisableCommandHandler(
-    IIdentityDbContext db)
+    IIdentityDbContext db,
+    ITenantContext tenantContext,
+    IPermissionAuthorizationService authorizationService)
     : ICommandHandler<BranchDisableCommand, Result>
 {
     public async Task<Result> Handle(
         BranchDisableCommand command,
         CancellationToken cancellationToken)
     {
+        await BranchPermissionGuard.RequireTenantScopeAsync(
+            authorizationService,
+            tenantContext,
+            SystemPermissionCatalog.Branches.Disable,
+            cancellationToken);
+
         var branch = await db.Branches
             .SingleOrDefaultAsync(
                 x => x.Id == command.Id,
@@ -160,13 +185,21 @@ public sealed class BranchDisableCommandHandler(
 public sealed record SetMainBranchCommand(Guid BranchId) : ICommand<Result>;
 
 public sealed class SetMainBranchCommandHandler(
-    IIdentityDbContext db)
+    IIdentityDbContext db,
+    ITenantContext tenantContext,
+    IPermissionAuthorizationService authorizationService)
     : ICommandHandler<SetMainBranchCommand, Result>
 {
     public async Task<Result> Handle(
         SetMainBranchCommand command,
         CancellationToken cancellationToken)
     {
+        await BranchPermissionGuard.RequireTenantScopeAsync(
+            authorizationService,
+            tenantContext,
+            SystemPermissionCatalog.Branches.SetMain,
+            cancellationToken);
+
         var target = await db.Branches
             .SingleOrDefaultAsync(
                 x => x.Id == command.BranchId,

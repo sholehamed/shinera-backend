@@ -1,4 +1,5 @@
 using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Authorization;
 
 namespace Modules.System.Identity.Application.Features.Branches.Queries;
 
@@ -14,15 +15,31 @@ public sealed record BranchListItemDto(
     bool IsActive);
 
 public sealed class BranchListQueryHandler(
-    IIdentityDbContext db)
+    IIdentityDbContext db,
+    ITenantContext tenantContext,
+    IPermissionAuthorizationService authorizationService)
     : IQueryHandler<BranchListQuery, IReadOnlyList<BranchListItemDto>>
 {
     public async Task<IReadOnlyList<BranchListItemDto>> Handle(
         BranchListQuery request,
         CancellationToken cancellationToken)
     {
-        return await db.Branches
-            .AsNoTracking()
+        var visibleBranchIds =
+            await BranchPermissionGuard.ResolveVisibleBranchIdsAsync(
+                authorizationService,
+                tenantContext,
+                SystemPermissionCatalog.Branches.List,
+                cancellationToken);
+
+        var query = db.Branches.AsNoTracking();
+
+        if (visibleBranchIds is not null)
+        {
+            query = query.Where(
+                x => visibleBranchIds.Contains(x.Id));
+        }
+
+        return await query
             .OrderByDescending(x => x.IsMain)
             .ThenBy(x => x.Name)
             .Select(x => new BranchListItemDto(
@@ -48,13 +65,22 @@ public sealed record BranchDetailsDto(
     bool IsActive);
 
 public sealed class BranchGetByIdQueryHandler(
-    IIdentityDbContext db)
+    IIdentityDbContext db,
+    ITenantContext tenantContext,
+    IPermissionAuthorizationService authorizationService)
     : IQueryHandler<BranchGetByIdQuery, BranchDetailsDto>
 {
     public async Task<BranchDetailsDto> Handle(
         BranchGetByIdQuery request,
         CancellationToken cancellationToken)
     {
+        await BranchPermissionGuard.RequireBranchScopeAsync(
+            authorizationService,
+            tenantContext,
+            SystemPermissionCatalog.Branches.List,
+            request.Id,
+            cancellationToken);
+
         var branch = await db.Branches
             .AsNoTracking()
             .Where(x => x.Id == request.Id)
