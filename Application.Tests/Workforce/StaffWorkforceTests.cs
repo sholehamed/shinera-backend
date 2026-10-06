@@ -147,7 +147,35 @@ public sealed class StaffWorkforceTests
     }
 
     [Fact]
-    public async Task StaffList_FiltersByBranchServiceAndStatus()
+    public async Task AssignServices_RejectsAnotherTenantService()
+    {
+        await using var fixture = await CreateFixtureAsync();
+
+        var staff = await fixture.AddStaffAsync();
+        var foreignService = await fixture.AddServiceAsync(
+            "Foreign",
+            Guid.NewGuid());
+
+        var handler = new ReplaceStaffServicesCommandHandler(
+            fixture.Workforce,
+            fixture.Services,
+            fixture.TenantContext,
+            fixture.TenantAuthorization);
+
+        var result = await handler.Handle(
+            new ReplaceStaffServicesCommand(
+                staff.Id,
+                [foreignService.Id]),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(
+            "staff.service_invalid",
+            result.Error.Code);
+    }
+
+    [Fact]
+    public async Task StaffList_FiltersBySearchBranchServiceAndStatus()
     {
         await using var fixture = await CreateFixtureAsync();
 
@@ -195,6 +223,7 @@ public sealed class StaffWorkforceTests
         var result = await handler.Handle(
             new StaffListQuery
             {
+                Search = "Sara",
                 BranchId = branch.Id,
                 ServiceId = service.Id,
                 IsActive = true,
@@ -551,22 +580,36 @@ public sealed class StaffWorkforceTests
         }
 
         public async Task<ServiceEntity> AddServiceAsync(
-            string name)
+            string name,
+            Guid? tenantId = null)
         {
+            var ownerTenantId = tenantId ?? TenantId;
+
             var category = new ServiceCategory(
-                TenantId,
+                ownerTenantId,
                 $"{name} Category");
 
             var service = new ServiceEntity(
-                TenantId,
+                ownerTenantId,
                 category.Id,
                 name,
                 30,
                 100_000m);
 
-            Services.ServiceCategories.Add(category);
-            Services.Services.Add(service);
-            await Services.SaveChangesAsync();
+            if (ownerTenantId == TenantId)
+            {
+                Services.ServiceCategories.Add(category);
+                Services.Services.Add(service);
+                await Services.SaveChangesAsync();
+                return service;
+            }
+
+            using (TenantContext.DisableFilter())
+            {
+                Services.ServiceCategories.Add(category);
+                Services.Services.Add(service);
+                await Services.SaveChangesAsync();
+            }
 
             return service;
         }
