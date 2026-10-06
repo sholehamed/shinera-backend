@@ -2,9 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Web.SharedKernel.Models;
 
-namespace Modules.System.Identity.Web.Authorization;
+namespace Web.SharedKernel.Authorization;
 
-public sealed class PermissionAuthorizationMiddlewareResultHandler
+public sealed class StableAuthorizationMiddlewareResultHandler
     : IAuthorizationMiddlewareResultHandler
 {
     private readonly AuthorizationMiddlewareResultHandler _defaultHandler = new();
@@ -21,14 +21,12 @@ public sealed class PermissionAuthorizationMiddlewareResultHandler
                 .FailureReasons
                 .Select(reason => reason.Message)
                 .FirstOrDefault(message =>
-                    message.StartsWith(
-                        "authorization.",
-                        StringComparison.Ordinal));
+                    message.StartsWith("authorization.", StringComparison.Ordinal) ||
+                    message.StartsWith("subscription.", StringComparison.Ordinal));
 
             if (!string.IsNullOrWhiteSpace(errorCode))
             {
-                context.Response.StatusCode =
-                    StatusCodes.Status403Forbidden;
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
 
                 await context.Response.WriteAsJsonAsync(
                     ApiResponse.Fail(
@@ -55,6 +53,21 @@ public sealed class PermissionAuthorizationMiddlewareResultHandler
 
             "authorization.scope_denied" =>
                 "The requested operation is outside the allowed permission scope.",
+
+            "subscription.required" =>
+                "An active subscription is required for this operation.",
+
+            "subscription.inactive" =>
+                "The current subscription is not entitled to this operation.",
+
+            "subscription.feature_unavailable" =>
+                "The current subscription does not include this feature.",
+
+            "subscription.limit_reached" =>
+                "The subscription limit for this operation has been reached.",
+
+            "subscription.over_limit" =>
+                "Current usage exceeds the subscription limit.",
 
             _ =>
                 "The required permission is not granted."

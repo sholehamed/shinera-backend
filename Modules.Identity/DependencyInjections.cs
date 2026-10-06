@@ -1,8 +1,8 @@
 using Application.SharedKernel;
+using Application.SharedKernel.Abstractions;
 using Infrastructure.SharedKernel;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,7 +35,11 @@ public static class DependencyInjections
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddScoped<ICurrentUser, CurrentUser>();
 
-        services.AddScoped<ITenantContext, TenantContext>();
+        services.AddScoped<TenantContext>();
+        services.AddScoped<ITenantContext>(
+            provider => provider.GetRequiredService<TenantContext>());
+        services.AddScoped<ICurrentTenant>(
+            provider => provider.GetRequiredService<TenantContext>());
         services.AddScoped<ITenantAccessResolver, TenantAccessResolver>();
         services.AddScoped<TenantSaveChangesInterceptor>();
 
@@ -82,9 +86,6 @@ public static class DependencyInjections
             provider => provider.GetRequiredService<IdentityDbContext>());
         services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
-        services.AddSingleton<
-            IAuthorizationMiddlewareResultHandler,
-            PermissionAuthorizationMiddlewareResultHandler>();
 
         services.AddOpenIddict()
             .AddCore(options =>

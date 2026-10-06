@@ -1,8 +1,9 @@
+using Application.SharedKernel.Abstractions;
 using Modules.System.Identity.Application.Abstractions;
 
 namespace Modules.System.Identity.Application.Services;
 
-public sealed class TenantContext : ITenantContext
+public sealed class TenantContext : ITenantContext, ICurrentTenant
 {
     private Guid[] _readable = [];
     private Guid[] _writable = [];
@@ -10,6 +11,7 @@ public sealed class TenantContext : ITenantContext
 
     public Guid? UserId { get; private set; }
     public Guid? ActiveTenantId { get; private set; }
+    public Guid? TenantId => ActiveTenantId;
     public bool IsSuperAdmin { get; private set; }
 
     public IReadOnlyCollection<Guid> ReadableTenantIds => _readable;
