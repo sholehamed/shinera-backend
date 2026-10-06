@@ -2,6 +2,7 @@ using Modules.System.Subscription.Application.Abstractions;
 using Modules.System.Subscription.Application.Entitlements;
 using Application.SharedKernel.Registration;
 using Modules.System.Subscription.Application.Registration;
+using Modules.System.Subscription.Infrastructure.Persistence;
 using Modules.System.Subscription.Infrastructure.Persistence.Contexts;
 using Modules.System.Subscription.Infrastructure.Persistence.Interceptors;
 using Modules.System.Subscription.Web.Authorization;
@@ -31,6 +32,7 @@ public static class DependencyInjections
                 provider.GetRequiredService<SubscriptionDbContext>());
 
         services.AddScoped<IEntitlementService, EntitlementService>();
+        services.AddScoped<SubscriptionCatalogSeedContributor>();
         services.AddScoped<IRegistrationSubscriptionProvisioner, RegistrationSubscriptionProvisioner>();
         services.AddScoped<IAuthorizationHandler, FeatureEntitlementAuthorizationHandler>();
 
