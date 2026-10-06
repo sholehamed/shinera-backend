@@ -12,7 +12,9 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
 
-builder.Services.AddIdentityModule(builder.Configuration);
+builder.Services.AddIdentityModule(
+    builder.Configuration,
+    builder.Environment);
 builder.Services.AddSubscriptionModule(builder.Configuration);
 
 builder.Services.AddScalarClientGeneration();
