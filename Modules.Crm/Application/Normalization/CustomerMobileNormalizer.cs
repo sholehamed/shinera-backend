@@ -26,7 +26,9 @@ public static class CustomerMobileNormalizer
         if (normalized.StartsWith("00", StringComparison.Ordinal))
             normalized = "+" + normalized[2..];
 
-        return normalized;
+        return normalized == "+"
+            ? string.Empty
+            : normalized;
     }
 
     private static bool TryNormalizeDigit(
