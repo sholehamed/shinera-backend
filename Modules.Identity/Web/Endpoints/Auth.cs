@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Modules.System.Identity.Application.Abstractions;
 using Modules.System.Identity.Application.Authorization;
 using Modules.System.Identity.Domain.Entities;
@@ -19,7 +20,9 @@ public class Auth : EndpointGroupBase
             .MapPost(
                 Login,
                 "session/login",
-                configure: x => x.AllowAnonymous())
+                configure: x => x
+                    .AllowAnonymous()
+                    .RequireRateLimiting("shinera-auth-login"))
             .MapPost(
                 LogoutSession,
                 "session/logout",
