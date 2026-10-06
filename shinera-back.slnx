@@ -16,6 +16,7 @@
     <Project Path="Modules.Services/Modules.Services.csproj" Id="b0e4654f-802e-4df8-b95f-17e1cbd82dc1" />
     <Project Path="Modules.Workforce/Modules.Workforce.csproj" Id="e7b17a2c-93a3-4c53-b9fb-9b4fd0f51c7d" />
     <Project Path="Modules.Crm/Modules.Crm.csproj" Id="611a419f-5ba3-44db-9e75-fd2beca34b85" />
+    <Project Path="Modules.Appointments/Modules.Appointments.csproj" Id="8f9db1a0-190c-41ca-b19b-863b6a4c1fa1" />
     <Project Path="Modules.MediaStorage/Modules.MediaStorage.csproj" Id="9004061e-f61f-45d8-9d54-7d0b3cfeb06a" />
     <Project Path="Scalar.ClientGeneration/Scalar.ClientGeneration.csproj" Id="2e068048-f0fd-4e29-8746-7f39a2becf21" />
   </Folder>
