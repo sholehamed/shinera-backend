@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Modules.System.Appointments;
+using Modules.System.Appointments.Infrastructure.Persistence.Contexts;
 using Modules.System.Crm;
 using Modules.System.Crm.Infrastructure.Persistence.Contexts;
 using Modules.System.Identity;
@@ -24,6 +26,7 @@ builder.Services.AddSubscriptionModule(builder.Configuration);
 builder.Services.AddServicesModule(builder.Configuration);
 builder.Services.AddWorkforceModule(builder.Configuration);
 builder.Services.AddCrmModule(builder.Configuration);
+builder.Services.AddAppointmentsModule(builder.Configuration);
 
 using var host = builder.Build();
 await using var scope = host.Services.CreateAsyncScope();
@@ -53,6 +56,11 @@ var crmDbContext =
 
 await crmDbContext.Database.MigrateAsync();
 
+var appointmentsDbContext =
+    scope.ServiceProvider.GetRequiredService<AppointmentsDbContext>();
+
+await appointmentsDbContext.Database.MigrateAsync();
+
 var subscriptionCatalogSeeder =
     scope.ServiceProvider.GetRequiredService<SubscriptionCatalogSeedContributor>();
 
@@ -69,4 +77,4 @@ var clientSeeder =
 await clientSeeder.SeedAsync(scope.ServiceProvider);
 
 Console.WriteLine(
-    "Identity, Subscription, Services, Workforce, and CRM migrations applied; plan catalog, system permission catalog, and Shinera web OpenIddict client synchronized.");
+    "Identity, Subscription, Services, Workforce, CRM, and Appointments migrations applied; plan catalog, system permission catalog, and Shinera web OpenIddict client synchronized.");

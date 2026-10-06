@@ -120,6 +120,13 @@ public static class SystemPermissionCatalog
         public const string AddNote = "add_note";
     }
 
+    public static class Appointments
+    {
+        public const string Resource = "appointments";
+        public const string View = "view";
+        public const string Create = "create";
+    }
+
     public static class Dashboard
     {
         public const string Resource = "dashboard";
@@ -169,7 +176,9 @@ public static class SystemPermissionCatalog
         Key(Staff.Resource, Staff.UpdateSchedule),
         Key(Customers.Resource, Customers.View),
         Key(Customers.Resource, Customers.Create),
-        Key(Customers.Resource, Customers.AddNote)
+        Key(Customers.Resource, Customers.AddNote),
+        Key(Appointments.Resource, Appointments.View),
+        Key(Appointments.Resource, Appointments.Create)
     ];
 
     public static string Key(string resource, string action) =>
