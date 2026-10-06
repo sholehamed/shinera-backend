@@ -101,10 +101,13 @@ public sealed class AppointmentConcurrencySqlServerTests
             first,
             second);
 
-        Assert.Single(results.Where(x => x.IsSuccess));
+        Assert.Single(
+            results,
+            result => result.IsSuccess);
 
         var conflict = Assert.Single(
-            results.Where(x => x.IsFailure));
+            results,
+            result => result.IsFailure);
 
         Assert.Equal(
             "appointment.conflict",
