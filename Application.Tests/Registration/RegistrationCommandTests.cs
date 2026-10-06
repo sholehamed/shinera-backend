@@ -375,7 +375,16 @@ public sealed class RegistrationCommandTests
         }
 
         identityDb.ChangeTracker.Clear();
-        subscriptionDb.ChangeTracker.Clear();
+
+        var verificationSubscriptionOptions =
+            new DbContextOptionsBuilder<SubscriptionDbContext>()
+                .UseSqlite(connection)
+                .Options;
+
+        await using var verificationSubscriptionDb =
+            new RegistrationSubscriptionTestDbContext(
+                verificationSubscriptionOptions,
+                tenantContext);
 
         using (tenantContext.DisableFilter())
         {
@@ -384,10 +393,8 @@ public sealed class RegistrationCommandTests
                     .AsNoTracking()
                     .AnyAsync(x => x.Id == tenantId));
 
-            // The provisioner rebound subscriptionDb to the Identity
-            // transaction connection, so this query checks the same database.
             Assert.False(
-                await subscriptionDb.Subscriptions
+                await verificationSubscriptionDb.Subscriptions
                     .IgnoreQueryFilters(["tenant"])
                     .AsNoTracking()
                     .AnyAsync(x => x.TenantId == tenantId));

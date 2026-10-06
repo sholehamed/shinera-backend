@@ -67,6 +67,21 @@ public sealed class EndpointAuthorizationMetadataTests(
     }
 
     [Fact]
+    public void RegistrationEndpoint_IsExplicitlyAnonymous()
+    {
+        using var client = factory.CreateClient();
+
+        var endpoint = GetRouteEndpoints()
+            .Single(x =>
+                NormalizeRoute(x).Equals(
+                    "/System/Registration",
+                    StringComparison.OrdinalIgnoreCase));
+
+        Assert.NotNull(
+            endpoint.Metadata.GetMetadata<IAllowAnonymous>());
+    }
+
+    [Fact]
     public void AdministrativeEndpoints_HavePermissionRequirements()
     {
         using var client = factory.CreateClient();
