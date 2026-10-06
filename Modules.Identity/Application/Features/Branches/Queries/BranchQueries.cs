@@ -1,4 +1,5 @@
 using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Features.Branches;
 using Modules.System.Identity.Application.Authorization;
 
 namespace Modules.System.Identity.Application.Features.Branches.Queries;

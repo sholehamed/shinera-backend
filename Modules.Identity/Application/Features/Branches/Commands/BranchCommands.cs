@@ -1,5 +1,6 @@
 using Application.SharedKernel.Exceptions;
 using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Features.Branches;
 using Modules.System.Identity.Application.Authorization;
 using Modules.System.Identity.Domain.Entities;
 
