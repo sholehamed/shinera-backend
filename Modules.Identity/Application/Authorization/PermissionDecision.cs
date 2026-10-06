@@ -8,7 +8,8 @@ public enum PermissionDecisionCode
     TenantContextMissing = 1,
     TenantMembershipRequired = 2,
     PermissionRequired = 3,
-    ScopeDenied = 4
+    ScopeDenied = 4,
+    UserInactive = 5
 }
 
 public sealed record PermissionDecision(
