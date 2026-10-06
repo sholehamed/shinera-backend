@@ -121,11 +121,11 @@ public sealed class AppointmentCoreTests
 
         var first = await fixture.CreateAsync(
             fixture.StaffId,
-            new TimeOnly(9, 0));
+            new TimeOnly(10, 30));
 
         var overlap = await fixture.CreateAsync(
             fixture.StaffId,
-            new TimeOnly(9, 30));
+            new TimeOnly(11, 0));
 
         Assert.True(first.IsSuccess);
         Assert.True(overlap.IsFailure);
@@ -166,11 +166,11 @@ public sealed class AppointmentCoreTests
 
         var first = await fixture.CreateAsync(
             fixture.StaffId,
-            new TimeOnly(9, 0));
+            new TimeOnly(10, 30));
 
         var adjacent = await fixture.CreateAsync(
             fixture.StaffId,
-            new TimeOnly(10, 0));
+            new TimeOnly(11, 30));
 
         Assert.True(first.IsSuccess);
         Assert.True(adjacent.IsSuccess);
