@@ -19,9 +19,17 @@ namespace Modules.System.Identity.Application.Features.Users.Commands
         {
 
             profile.CreateMap<UserUpdateCommand, User>()
-                .ForMember(x=>x.ImageId,opt=>opt.MapFrom(x=>x.Avatar))
-                .ForMember(x => x.NormalizedEmail, opt => opt.MapFrom(x => x.Email.ToUpper()))
-                .ForMember(x => x.NormalizedUserName, opt => opt.MapFrom(x => x.Username.ToLower()));
+                .ForMember(x => x.ImageId, opt => opt.MapFrom(x => x.Avatar))
+                .ForMember(x => x.UserName, opt => opt.MapFrom(x => x.Username.Trim()))
+                .ForMember(x => x.Email, opt => opt.MapFrom(x => x.Email.Trim()))
+                .ForMember(
+                    x => x.NormalizedEmail,
+                    opt => opt.MapFrom(
+                        x => x.Email.Trim().ToUpperInvariant()))
+                .ForMember(
+                    x => x.NormalizedUserName,
+                    opt => opt.MapFrom(
+                        x => x.Username.Trim().ToUpperInvariant()));
         }
     }
     public sealed class UserUpdateCommandValidator : AbstractValidator<UserUpdateCommand>

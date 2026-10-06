@@ -1,6 +1,7 @@
 using Application.SharedKernel.Exceptions;
 using Application.SharedKernel.Models;
 using Application.SharedKernel.Registration;
+using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ using Modules.System.Subscription.Infrastructure.Persistence.Contexts;
 using Modules.System.Identity.Application.Authorization;
 using Modules.System.Identity.Application.Features.BusinessProfiles;
 using Modules.System.Identity.Application.Features.Registration.Commands;
+using Modules.System.Identity.Application.Features.Users.Commands;
 using Modules.System.Identity.Application.Services;
 using Modules.System.Identity.Domain.Entities;
 using Modules.System.Identity.Infrastructure.Persistence.Contexts;
@@ -22,6 +24,43 @@ namespace Application.Tests.Registration;
 
 public sealed class RegistrationCommandTests
 {
+    [Fact]
+    public void UserUpdateMapping_NormalizesLoginIdentifiersConsistently()
+    {
+        var configuration = new MapperConfiguration(
+            cfg => new UserUpdateCommand().Mapping(cfg));
+
+        var mapper = configuration.CreateMapper();
+
+        var user = new User(
+            "old-user",
+            "old@example.com",
+            "Old",
+            "User")
+        {
+            PasswordHash = "hash"
+        };
+
+        mapper.Map(
+            new UserUpdateCommand
+            {
+                Id = user.Id,
+                Username = "  Mixed.User  ",
+                Password = "StrongPass123!",
+                Firstname = "Updated",
+                Lastname = "User",
+                Email = "  Mixed.Email@Example.com  "
+            },
+            user);
+
+        Assert.Equal("Mixed.User", user.UserName);
+        Assert.Equal("MIXED.USER", user.NormalizedUserName);
+        Assert.Equal("Mixed.Email@Example.com", user.Email);
+        Assert.Equal(
+            "MIXED.EMAIL@EXAMPLE.COM",
+            user.NormalizedEmail);
+    }
+
     [Fact]
     public async Task Validator_MissingNestedSections_ReturnsValidationErrors()
     {
