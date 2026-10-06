@@ -13,6 +13,7 @@ public sealed class EndpointAuthorizationMetadataTests(
     private static readonly string[] PermissionProtectedPrefixes =
     [
         "/System/Tenants",
+        "/System/Branches",
         "/System/Modules",
         "/System/Resources",
         "/System/Users",
