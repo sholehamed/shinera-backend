@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using System.Reflection;
@@ -14,7 +15,8 @@ public static class WebApplicationExtensions
 
         return app
             .MapGroup($"/{group.AppName}/{groupName}")
-            .WithTags(groupName);
+            .WithTags(groupName)
+            .RequireAuthorization();
     }
 
     public static WebApplication MapEndpoints(this WebApplication app,string appName)
