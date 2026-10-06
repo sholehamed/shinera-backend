@@ -1,6 +1,7 @@
 using Modules.System.Appointments.Application.Abstractions;
 using Modules.System.Appointments.Application.Authorization;
 using Modules.System.Appointments.Application.Availability;
+using Modules.System.Appointments.Domain;
 using Modules.System.Appointments.Domain.Entities;
 using Modules.System.Crm.Application.Abstractions;
 using Modules.System.Identity.Application.Authorization;
@@ -31,7 +32,8 @@ public sealed class AvailableSlotsQueryValidator
 public sealed class AvailableSlotsQueryHandler(
     IAppointmentAvailabilityService availabilityService,
     ICurrentTenant currentTenant,
-    IPermissionAuthorizationService authorizationService)
+    IPermissionAuthorizationService authorizationService,
+    IStaffBookingConcurrencyGuard concurrencyGuard)
     : IQueryHandler<
         AvailableSlotsQuery,
         Result<IReadOnlyList<TimeOnly>>>
@@ -106,6 +108,25 @@ public sealed class CreateAppointmentCommandHandler(
                 "tenant.context_missing",
                 "A tenant context is required for appointment operations.");
 
+        await using var transaction =
+            await db.Database.BeginTransactionAsync(
+                cancellationToken);
+
+        var staffLocked =
+            await concurrencyGuard.TryAcquireAsync(
+                db.Database,
+                tenantId,
+                command.StaffId,
+                cancellationToken);
+
+        if (!staffLocked)
+        {
+            return Result<Guid>.Failure(
+                Error.Validation(
+                    "appointment.staff_unavailable",
+                    "The selected staff member is not available for the current tenant."));
+        }
+
         var customerIsActive = await crmDb.Customers
             .AsNoTracking()
             .AnyAsync(
@@ -135,19 +156,14 @@ public sealed class CreateAppointmentCommandHandler(
             return Result<Guid>.Failure(slot.Error);
         }
 
-        await using var transaction =
-            await db.Database.BeginTransactionAsync(
-                IsolationLevel.Serializable,
-                cancellationToken);
-
         var hasConflict = await db.Appointments
             .AnyAsync(
                 x =>
                     x.StaffId == command.StaffId &&
                     x.Date == command.Date &&
-                    x.Status != AppointmentStatus.Cancelled &&
-                    x.StartTime < slot.Value.EndTime &&
-                    x.EndTime > command.StartTime,
+                    AppointmentBookingRules.BlockingStatuses.Contains(x.Status) &&
+                    x.StartUtc < slot.Value.EndUtc &&
+                    x.EndUtc > slot.Value.StartUtc,
                 cancellationToken);
 
         if (hasConflict)
@@ -167,6 +183,9 @@ public sealed class CreateAppointmentCommandHandler(
             command.Date,
             command.StartTime,
             slot.Value.EndTime,
+            slot.Value.StartUtc,
+            slot.Value.EndUtc,
+            slot.Value.TimeZoneId,
             slot.Value.Price,
             command.Notes,
             AppointmentStatus.Confirmed);
