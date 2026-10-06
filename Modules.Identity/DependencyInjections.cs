@@ -3,6 +3,7 @@ using Application.SharedKernel.Abstractions;
 using Infrastructure.SharedKernel;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,7 @@ using Modules.System.Identity.Web.Util;
 using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
 using System.Reflection;
+using Web.SharedKernel.Authorization;
 
 namespace Modules.System.Identity;
 
@@ -86,6 +88,9 @@ public static class DependencyInjections
             provider => provider.GetRequiredService<IdentityDbContext>());
         services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+        services.AddSingleton<
+            IAuthorizationMiddlewareResultHandler,
+            StableAuthorizationMiddlewareResultHandler>();
 
         services.AddOpenIddict()
             .AddCore(options =>
