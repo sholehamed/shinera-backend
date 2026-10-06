@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.System.Identity.Application.Abstractions;
 using Modules.System.Identity.Application.Authorization;
@@ -183,21 +184,43 @@ public sealed class SystemPermissionCatalogSeedContributor
             }
         }
 
+        var configuration =
+            serviceProvider.GetRequiredService<IConfiguration>();
+
+        var rawSystemTenantId =
+            configuration["Identity:SystemTenantId"];
+
+        if (string.IsNullOrWhiteSpace(rawSystemTenantId))
+        {
+            // Catalog definitions are global. Tenant assignments are left
+            // untouched unless a platform System Tenant is explicitly configured.
+            return;
+        }
+
+        if (!Guid.TryParse(rawSystemTenantId, out var systemTenantId))
+        {
+            throw new InvalidOperationException(
+                "Identity:SystemTenantId must be a valid Guid when configured.");
+        }
+
         using (tenantContext.DisableFilter())
         {
-            var rootTenantIds = await db.Tenants
+            var systemTenantExists = await db.Tenants
                 .AsNoTracking()
-                .Where(tenant => tenant.ParentId == null)
-                .Select(tenant => tenant.Id)
-                .ToListAsync();
+                .AnyAsync(tenant =>
+                    tenant.Id == systemTenantId &&
+                    tenant.IsActive);
 
-            if (rootTenantIds.Count == 0)
-                return;
+            if (!systemTenantExists)
+            {
+                throw new InvalidOperationException(
+                    "Identity:SystemTenantId does not reference an active Tenant.");
+            }
 
             var superAdminRoles = await db.Roles
                 .AsNoTracking()
                 .Where(role =>
-                    rootTenantIds.Contains(role.TenantId) &&
+                    role.TenantId == systemTenantId &&
                     role.NormalizedName == "SUPERADMIN" &&
                     role.IsActive)
                 .Select(role => new
