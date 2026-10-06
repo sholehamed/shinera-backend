@@ -30,6 +30,31 @@ public sealed class TimeZoneResolver : ITimeZoneResolver
         }
     }
 
+    public Result<BusinessLocalTime> ResolveFromUtc(
+        DateTimeOffset utcInstant,
+        string timeZoneId)
+    {
+        if (!IsValidIanaTimeZoneId(timeZoneId))
+        {
+            return Result<BusinessLocalTime>.Failure(
+                Error.Validation(
+                    "time.invalid_timezone",
+                    "The configured time zone is not a valid IANA time zone identifier."));
+        }
+
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(
+            timeZoneId.Trim());
+
+        var local = TimeZoneInfo.ConvertTime(
+            utcInstant.ToUniversalTime(),
+            zone);
+
+        return Result<BusinessLocalTime>.Success(
+            new BusinessLocalTime(
+                DateOnly.FromDateTime(local.DateTime),
+                TimeOnly.FromDateTime(local.DateTime)));
+    }
+
     public Result<DateTimeOffset> ResolveToUtc(
         DateOnly businessDate,
         TimeOnly localTime,
