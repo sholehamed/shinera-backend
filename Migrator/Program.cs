@@ -9,6 +9,8 @@ using Modules.System.Subscription.Infrastructure.Persistence;
 using Modules.System.Subscription.Infrastructure.Persistence.Contexts;
 using Modules.System.Services;
 using Modules.System.Services.Infrastructure.Persistence.Contexts;
+using Modules.System.Workforce;
+using Modules.System.Workforce.Infrastructure.Persistence.Contexts;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -18,6 +20,7 @@ builder.Services.AddIdentityModule(
     builder.Environment);
 builder.Services.AddSubscriptionModule(builder.Configuration);
 builder.Services.AddServicesModule(builder.Configuration);
+builder.Services.AddWorkforceModule(builder.Configuration);
 
 using var host = builder.Build();
 await using var scope = host.Services.CreateAsyncScope();
@@ -37,6 +40,11 @@ var servicesDbContext =
 
 await servicesDbContext.Database.MigrateAsync();
 
+var workforceDbContext =
+    scope.ServiceProvider.GetRequiredService<WorkforceDbContext>();
+
+await workforceDbContext.Database.MigrateAsync();
+
 var subscriptionCatalogSeeder =
     scope.ServiceProvider.GetRequiredService<SubscriptionCatalogSeedContributor>();
 
@@ -53,4 +61,4 @@ var clientSeeder =
 await clientSeeder.SeedAsync(scope.ServiceProvider);
 
 Console.WriteLine(
-    "Identity, Subscription, and Services migrations applied; plan catalog, system permission catalog, and Shinera web OpenIddict client synchronized.");
+    "Identity, Subscription, Services, and Workforce migrations applied; plan catalog, system permission catalog, and Shinera web OpenIddict client synchronized.");

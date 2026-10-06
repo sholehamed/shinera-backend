@@ -71,12 +71,7 @@ public sealed class SystemPermissionCatalogSeedContributorTests
             db.Modules.Add(systemModule);
 
             var baselineKeys =
-                SystemPermissionCatalog.WorkspaceOwnerPermissionKeys
-                    .Where(key =>
-                        !key.StartsWith(
-                            $"{SystemPermissionCatalog.Services.Resource}.",
-                            StringComparison.Ordinal))
-                    .ToArray();
+                SystemPermissionCatalog.WorkspaceOwnerBaselinePermissionKeys;
 
             foreach (var resourceGroup in
                      baselineKeys.GroupBy(
@@ -130,7 +125,7 @@ public sealed class SystemPermissionCatalogSeedContributorTests
 
         using (tenantContext.DisableFilter())
         {
-            var servicePermissionCodes =
+            var workspacePermissionCodes =
                 await db.PermissionAssignments
                     .AsNoTracking()
                     .Where(x =>
@@ -150,7 +145,8 @@ public sealed class SystemPermissionCatalogSeedContributorTests
                         (assignment, permission) =>
                             permission.Code)
                     .Where(code =>
-                        code.StartsWith("services."))
+                        code.StartsWith("services.") ||
+                        code.StartsWith("staff."))
                     .OrderBy(code => code)
                     .ToListAsync();
 
@@ -160,9 +156,14 @@ public sealed class SystemPermissionCatalogSeedContributorTests
                     "services.create",
                     "services.delete",
                     "services.update",
-                    "services.view"
+                    "services.view",
+                    "staff.assign_branches",
+                    "staff.assign_services",
+                    "staff.create",
+                    "staff.update",
+                    "staff.view"
                 },
-                servicePermissionCodes);
+                workspacePermissionCodes);
         }
     }
 
@@ -245,7 +246,8 @@ public sealed class SystemPermissionCatalogSeedContributorTests
                         (assignment, permission) =>
                             permission.Code)
                     .CountAsync(code =>
-                        code.StartsWith("services."));
+                        code.StartsWith("services.") ||
+                        code.StartsWith("staff."));
 
             Assert.Equal(
                 0,

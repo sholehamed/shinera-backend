@@ -20,6 +20,7 @@
     <ProjectReference Include="..\Modules.Identity\Modules.Identity.csproj" />
     <ProjectReference Include="..\Modules.Subscription\Modules.Subscription.csproj" />
     <ProjectReference Include="..\Modules.Services\Modules.Services.csproj" />
+    <ProjectReference Include="..\Modules.Workforce\Modules.Workforce.csproj" />
     <ProjectReference Include="..\Scalar.ClientGeneration\Scalar.ClientGeneration.csproj" />
     <ProjectReference Include="..\Web.Sharedkernel\Web.Sharedkernel.csproj" />
   </ItemGroup>

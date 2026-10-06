@@ -117,6 +117,34 @@ public sealed class EndpointAuthorizationMetadataTests(
     }
 
     [Fact]
+    public void WorkforceEndpoints_HavePermissionRequirements()
+    {
+        using var client = factory.CreateClient();
+
+        var endpoints = GetRouteEndpoints()
+            .Where(endpoint =>
+                NormalizeRoute(endpoint)
+                    .StartsWith(
+                        "/Workforce/Staff",
+                        StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        Assert.NotEmpty(endpoints);
+
+        foreach (var endpoint in endpoints)
+        {
+            var permissionRequirements =
+                endpoint.Metadata
+                    .GetOrderedMetadata<AuthorizationPolicy>()
+                    .SelectMany(policy => policy.Requirements)
+                    .OfType<PermissionRequirement>()
+                    .ToList();
+
+            Assert.NotEmpty(permissionRequirements);
+        }
+    }
+
+    [Fact]
     public void AdministrativeEndpoints_HavePermissionRequirements()
     {
         using var client = factory.CreateClient();
