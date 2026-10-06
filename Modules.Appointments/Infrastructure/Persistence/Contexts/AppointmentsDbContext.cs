@@ -12,7 +12,7 @@ public class AppointmentsDbContext(
     public DbSet<Appointment> Appointments =>
         Set<Appointment>();
 
-    public Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database =>
+    public new Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database =>
         base.Database;
 
     private bool FilterDisabled =>
