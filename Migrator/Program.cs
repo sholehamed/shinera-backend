@@ -10,7 +10,9 @@ using Modules.System.Subscription.Infrastructure.Persistence.Contexts;
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddIdentityModule(builder.Configuration);
+builder.Services.AddIdentityModule(
+    builder.Configuration,
+    builder.Environment);
 builder.Services.AddSubscriptionModule(builder.Configuration);
 
 using var host = builder.Build();
