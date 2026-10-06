@@ -1,3 +1,4 @@
+using Application.SharedKernel.Exceptions;
 using Application.SharedKernel.Models;
 using Application.SharedKernel.Registration;
 using Microsoft.AspNetCore.Identity;
