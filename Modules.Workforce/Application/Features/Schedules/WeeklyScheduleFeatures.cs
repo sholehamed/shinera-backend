@@ -101,7 +101,6 @@ public sealed class StaffWeeklyScheduleQueryHandler(
             DayOfWeek.Friday => 6,
             _ => 99
         };
-    }
 }
 
 public sealed record ReplaceStaffWeeklyScheduleCommand(
