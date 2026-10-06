@@ -111,6 +111,16 @@ public sealed class SystemPermissionCatalogSeedContributor
                 SystemPermissionCatalog.Services.Delete
             ]),
         new(
+            SystemPermissionCatalog.Staff.Resource,
+            "Staff",
+            [
+                SystemPermissionCatalog.Staff.View,
+                SystemPermissionCatalog.Staff.Create,
+                SystemPermissionCatalog.Staff.Update,
+                SystemPermissionCatalog.Staff.AssignBranches,
+                SystemPermissionCatalog.Staff.AssignServices
+            ]),
+        new(
             SystemPermissionCatalog.Dashboard.Resource,
             "Dashboard",
             [
@@ -317,9 +327,8 @@ public sealed class SystemPermissionCatalogSeedContributor
 
         var baselineOwnerPermissionIds = workspaceOwnerPermissions
             .Where(permission =>
-                !permission.Code.StartsWith(
-                    $"{SystemPermissionCatalog.Services.Resource}.",
-                    StringComparison.Ordinal))
+                SystemPermissionCatalog.WorkspaceOwnerBaselinePermissionKeys
+                    .Contains(permission.Code))
             .Select(permission => permission.Id)
             .ToHashSet();
 

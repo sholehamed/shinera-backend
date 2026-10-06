@@ -100,13 +100,23 @@ public static class SystemPermissionCatalog
         public const string Delete = "delete";
     }
 
+    public static class Staff
+    {
+        public const string Resource = "staff";
+        public const string View = "view";
+        public const string Create = "create";
+        public const string Update = "update";
+        public const string AssignBranches = "assign_branches";
+        public const string AssignServices = "assign_services";
+    }
+
     public static class Dashboard
     {
         public const string Resource = "dashboard";
         public const string View = "view";
     }
 
-    public static readonly string[] WorkspaceOwnerPermissionKeys =
+    public static readonly string[] WorkspaceOwnerBaselinePermissionKeys =
     [
         Key(Tenants.Resource, Tenants.List),
         Key(Tenants.Resource, Tenants.Update),
@@ -130,11 +140,21 @@ public static class SystemPermissionCatalog
         Key(Groups.Resource, Groups.Update),
         Key(Groups.Resource, Groups.Delete),
         Key(Permissions.Resource, Permissions.List),
+        Key(Dashboard.Resource, Dashboard.View)
+    ];
+
+    public static readonly string[] WorkspaceOwnerPermissionKeys =
+    [
+        .. WorkspaceOwnerBaselinePermissionKeys,
         Key(Services.Resource, Services.View),
         Key(Services.Resource, Services.Create),
         Key(Services.Resource, Services.Update),
         Key(Services.Resource, Services.Delete),
-        Key(Dashboard.Resource, Dashboard.View)
+        Key(Staff.Resource, Staff.View),
+        Key(Staff.Resource, Staff.Create),
+        Key(Staff.Resource, Staff.Update),
+        Key(Staff.Resource, Staff.AssignBranches),
+        Key(Staff.Resource, Staff.AssignServices)
     ];
 
     public static string Key(string resource, string action) =>
