@@ -48,6 +48,7 @@ public static class DependencyInjections
         services.AddScoped<ICurrentTenant>(
             provider => provider.GetRequiredService<TenantContext>());
         services.AddScoped<ITenantAccessResolver, TenantAccessResolver>();
+        services.AddScoped<IBranchAccessResolver, BranchAccessResolver>();
         services.AddScoped<TenantSaveChangesInterceptor>();
 
         services.AddBaseInfrastructureServices<IdentityDbContext>(

@@ -10,6 +10,8 @@ public sealed class SecureByDefaultEndpointTests(
 {
     [Theory]
     [InlineData("/System/Tenants/pagedList")]
+    [InlineData("/System/Branches")]
+    [InlineData("/System/Workspace/current")]
     [InlineData("/System/Users/pagedList")]
     [InlineData("/System/Roles/lookup")]
     [InlineData("/System/Resources/lookup")]

@@ -119,6 +119,140 @@ namespace Modules.Identity.Migrations
                     b.ToTable("ApiResources");
                 });
 
+            modelBuilder.Entity("Modules.System.Identity.Domain.Entities.Branch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsMain")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("LastModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("LastModifiedByIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .IsDescending();
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Branches_TenantId_Main")
+                        .HasFilter("[IsMain] = 1");
+
+                    b.HasIndex("TenantId", "IsActive");
+
+                    b.ToTable("Branches");
+                });
+
+            modelBuilder.Entity("Modules.System.Identity.Domain.Entities.BranchMembership", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("LastModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("LastModifiedByIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("CreatedAt")
+                        .IsDescending();
+
+                    b.HasIndex("TenantId", "BranchId", "UserId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "UserId", "IsActive");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("BranchMemberships");
+                });
+
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.Group", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1282,6 +1416,44 @@ b.Property<string>("UserName")
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Modules.System.Identity.Domain.Entities.Branch", b =>
+                {
+                    b.HasOne("Modules.System.Identity.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Branches")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Modules.System.Identity.Domain.Entities.BranchMembership", b =>
+                {
+                    b.HasOne("Modules.System.Identity.Domain.Entities.Branch", "Branch")
+                        .WithMany("Memberships")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Modules.System.Identity.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Modules.System.Identity.Domain.Entities.User", "User")
+                        .WithMany("BranchMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.TenantMembership", b =>
                 {
                     b.HasOne("Modules.System.Identity.Domain.Entities.Tenant", "Tenant")
@@ -2059,6 +2231,11 @@ b.Property<string>("UserName")
                     b.Navigation("PermissionApiResources");
                 });
 
+            modelBuilder.Entity("Modules.System.Identity.Domain.Entities.Branch", b =>
+                {
+                    b.Navigation("Memberships");
+                });
+
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.Group", b =>
                 {
                     b.Navigation("GroupRoles");
@@ -2114,6 +2291,8 @@ b.Property<string>("UserName")
 
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.Tenant", b =>
                 {
+                    b.Navigation("Branches");
+
                     b.Navigation("Memberships");
 
                     b.Navigation("TenantModules");
@@ -2126,6 +2305,8 @@ b.Property<string>("UserName")
 
             modelBuilder.Entity("Modules.System.Identity.Domain.Entities.User", b =>
                 {
+                    b.Navigation("BranchMemberships");
+
                     b.Navigation("TenantMemberships");
 
                     b.Navigation("UserGroups");

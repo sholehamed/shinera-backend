@@ -80,6 +80,7 @@ public class User : AuditableEntity
     public int AccessFailedCount { get; set; }
 
     public ICollection<TenantMembership> TenantMemberships { get; set; } = [];
+    public ICollection<BranchMembership> BranchMemberships { get; set; } = [];
     public ICollection<UserRole> UserRoles { get; set; } = [];
     public ICollection<UserGroup> UserGroups { get; set; } = [];
     public ICollection<UserPermission> UserPermissions { get; set; } = [];

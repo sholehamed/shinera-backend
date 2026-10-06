@@ -14,6 +14,7 @@ public class Tenant : AuditableEntity
     public bool IsActive { get; set; } = true;
 
     public ICollection<TenantMembership> Memberships { get; set; } = [];
+    public ICollection<Branch> Branches { get; set; } = [];
     public virtual ICollection<TenantModule> TenantModules { get; set; } = [];
 
     public Tenant() : base(13)

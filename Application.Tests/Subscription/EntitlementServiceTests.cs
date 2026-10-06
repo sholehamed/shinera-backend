@@ -421,10 +421,15 @@ public sealed class EntitlementServiceTests
     {
         private int _disableDepth;
 
+        public Guid? UserId => null;
         public Guid? TenantId { get; } = tenantId;
+        public Guid? BranchId => null;
 
         public IReadOnlyCollection<Guid> WritableTenantIds =>
             [tenantId];
+
+        public IReadOnlyCollection<Guid> WritableBranchIds =>
+            [];
 
         public bool IsFilterDisabled =>
             _disableDepth > 0;

@@ -11,6 +11,8 @@ public class IdentityDbContext(
     ITenantContext tenantContext)
     : BaseDbContext(options), IIdentityDbContext
 {
+    public DbSet<Branch> Branches => Set<Branch>();
+    public DbSet<BranchMembership> BranchMemberships => Set<BranchMembership>();
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<GroupRole> GroupRoles => Set<GroupRole>();
     public DbSet<Domain.Entities.Module> Modules => Set<Domain.Entities.Module>();
@@ -37,6 +39,7 @@ public class IdentityDbContext(
 
     private bool FilterDisabled => tenantContext.IsFilterDisabled;
     private Guid CurrentTenantId => tenantContext.ActiveTenantId ?? Guid.Empty;
+    private Guid CurrentBranchId => tenantContext.ActiveBranchId ?? Guid.Empty;
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -55,15 +58,25 @@ public class IdentityDbContext(
             if (entityType.IsOwned())
                 continue;
 
-            if (!typeof(IMustHaveTenant).IsAssignableFrom(entityType.ClrType))
-                continue;
+            if (typeof(IMustHaveTenant).IsAssignableFrom(entityType.ClrType))
+            {
+                typeof(IdentityDbContext)
+                    .GetMethod(
+                        nameof(ApplyTenantFilter),
+                        BindingFlags.NonPublic | BindingFlags.Instance)!
+                    .MakeGenericMethod(entityType.ClrType)
+                    .Invoke(this, [builder]);
+            }
 
-            typeof(IdentityDbContext)
-                .GetMethod(
-                    nameof(ApplyTenantFilter),
-                    BindingFlags.NonPublic | BindingFlags.Instance)!
-                .MakeGenericMethod(entityType.ClrType)
-                .Invoke(this, [builder]);
+            if (typeof(IMustHaveBranch).IsAssignableFrom(entityType.ClrType))
+            {
+                typeof(IdentityDbContext)
+                    .GetMethod(
+                        nameof(ApplyBranchFilter),
+                        BindingFlags.NonPublic | BindingFlags.Instance)!
+                    .MakeGenericMethod(entityType.ClrType)
+                    .Invoke(this, [builder]);
+            }
         }
     }
 
@@ -74,5 +87,14 @@ public class IdentityDbContext(
             .HasQueryFilter(
                 "tenant",
                 entity => FilterDisabled || entity.TenantId == CurrentTenantId);
+    }
+
+    private void ApplyBranchFilter<TEntity>(ModelBuilder builder)
+        where TEntity : class, IMustHaveBranch
+    {
+        builder.Entity<TEntity>()
+            .HasQueryFilter(
+                "branch",
+                entity => FilterDisabled || entity.BranchId == CurrentBranchId);
     }
 }

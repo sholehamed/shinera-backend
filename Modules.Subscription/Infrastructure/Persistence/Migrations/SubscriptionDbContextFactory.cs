@@ -31,8 +31,11 @@ internal sealed class SubscriptionDbContextFactory
     private sealed class DesignTimeCurrentTenant
         : ICurrentTenant
     {
+        public Guid? UserId => null;
         public Guid? TenantId => null;
+        public Guid? BranchId => null;
         public IReadOnlyCollection<Guid> WritableTenantIds => [];
+        public IReadOnlyCollection<Guid> WritableBranchIds => [];
         public bool IsFilterDisabled => false;
     }
 }
