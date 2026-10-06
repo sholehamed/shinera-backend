@@ -192,6 +192,15 @@ public sealed class AppointmentCoreTests
                 fixture.Date,
                 new TimeOnly(9, 0),
                 new TimeOnly(10, 0),
+                new DateTimeOffset(
+                    fixture.Date.ToDateTime(
+                        new TimeOnly(9, 0),
+                        DateTimeKind.Utc)),
+                new DateTimeOffset(
+                    fixture.Date.ToDateTime(
+                        new TimeOnly(10, 0),
+                        DateTimeKind.Utc)),
+                "Etc/UTC",
                 500_000m,
                 status: AppointmentStatus.Cancelled));
 
@@ -248,6 +257,15 @@ public sealed class AppointmentCoreTests
                     fixture.Date,
                     new TimeOnly(9, 0),
                     new TimeOnly(10, 0),
+                    new DateTimeOffset(
+                        fixture.Date.ToDateTime(
+                            new TimeOnly(9, 0),
+                            DateTimeKind.Utc)),
+                    new DateTimeOffset(
+                        fixture.Date.ToDateTime(
+                            new TimeOnly(10, 0),
+                            DateTimeKind.Utc)),
+                    "Etc/UTC",
                     1));
 
             await fixture.Appointments.SaveChangesAsync();
@@ -326,7 +344,8 @@ public sealed class AppointmentCoreTests
                     Identity,
                     Services,
                     Workforce,
-                    Schedule);
+                    Schedule,
+                    new Application.SharedKernel.Services.TimeZoneResolver());
 
             Authorization =
                 new TenantAuthorizationService();
@@ -337,7 +356,8 @@ public sealed class AppointmentCoreTests
                     Crm,
                     Availability,
                     TenantContext,
-                    Authorization);
+                    Authorization,
+                    new Application.Tests.TestDoubles.AllowStaffBookingConcurrencyGuard());
         }
 
         public DateOnly Date { get; } =
