@@ -11,6 +11,16 @@ public static class SystemPermissionCatalog
         public const string Delete = "delete";
     }
 
+    public static class Branches
+    {
+        public const string Resource = "branches";
+        public const string List = "list";
+        public const string Create = "create";
+        public const string Update = "update";
+        public const string Disable = "disable";
+        public const string SetMain = "set_main";
+    }
+
     public static class Modules
     {
         public const string Resource = "modules";
