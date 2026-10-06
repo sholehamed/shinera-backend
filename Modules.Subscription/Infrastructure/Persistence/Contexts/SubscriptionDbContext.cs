@@ -5,7 +5,7 @@ using SubscriptionEntity = Modules.System.Subscription.Domain.Entities.Subscript
 
 namespace Modules.System.Subscription.Infrastructure.Persistence.Contexts;
 
-public sealed class SubscriptionDbContext(
+public class SubscriptionDbContext(
     DbContextOptions<SubscriptionDbContext> options,
     ICurrentTenant currentTenant)
     : BaseDbContext(options), IEntitlementDbContext
