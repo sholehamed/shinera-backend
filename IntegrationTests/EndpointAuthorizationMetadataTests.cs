@@ -21,6 +21,7 @@ public sealed class EndpointAuthorizationMetadataTests(
         "/System/ApiResources",
         "/System/UiResources",
         "/System/Groups",
+        "/System/Menus",
         "/System/MenuCategories",
         "/System/Dashboard"
     ];
@@ -89,6 +90,10 @@ public sealed class EndpointAuthorizationMetadataTests(
 
             if (route.Equals(
                     "/System/Tenants/resolve",
+                    StringComparison.OrdinalIgnoreCase)
+                ||
+                route.Equals(
+                    "/System/Menus/getUserMenus",
                     StringComparison.OrdinalIgnoreCase))
             {
                 continue;
