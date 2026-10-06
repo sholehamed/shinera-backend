@@ -9,7 +9,8 @@ namespace Modules.System.Identity.Application.Features.Branches.Commands;
 public sealed record BranchCreateCommand(
     string Name,
     string? Phone,
-    string? Address) : ICommand<Guid>;
+    string? Address,
+    string? TimeZoneId = null) : ICommand<Guid>;
 
 public sealed class BranchCreateCommandValidator
     : AbstractValidator<BranchCreateCommand>
@@ -25,13 +26,17 @@ public sealed class BranchCreateCommandValidator
 
         RuleFor(x => x.Address)
             .MaximumLength(500);
+
+        RuleFor(x => x.TimeZoneId)
+            .MaximumLength(128);
     }
 }
 
 public sealed class BranchCreateCommandHandler(
     IIdentityDbContext db,
     ITenantContext tenantContext,
-    IPermissionAuthorizationService authorizationService)
+    IPermissionAuthorizationService authorizationService,
+    ITimeZoneResolver timeZoneResolver)
     : ICommandHandler<BranchCreateCommand, Guid>
 {
     public async Task<Guid> Handle(
@@ -54,11 +59,29 @@ public sealed class BranchCreateCommandHandler(
                 "tenant.user_context_invalid",
                 "The authenticated user context is invalid.");
 
+        var tenantTimeZoneId = await db.Tenants
+            .AsNoTracking()
+            .Where(x => x.Id == tenantId)
+            .Select(x => x.DefaultTimeZoneId)
+            .SingleAsync(cancellationToken);
+
+        var timeZoneId =
+            string.IsNullOrWhiteSpace(command.TimeZoneId)
+                ? tenantTimeZoneId
+                : command.TimeZoneId.Trim();
+
+        if (!timeZoneResolver.IsValidIanaTimeZoneId(timeZoneId))
+        {
+            throw new ValidationException(
+                "The selected branch time zone is not a valid IANA time zone identifier.");
+        }
+
         var branch = new Branch(
             tenantId,
             command.Name.Trim(),
             Normalize(command.Phone),
-            Normalize(command.Address));
+            Normalize(command.Address),
+            timeZoneId: timeZoneId);
 
         db.Branches.Add(branch);
         db.BranchMemberships.Add(
@@ -82,7 +105,8 @@ public sealed record BranchUpdateCommand(
     Guid Id,
     string Name,
     string? Phone,
-    string? Address) : ICommand;
+    string? Address,
+    string? TimeZoneId = null) : ICommand;
 
 public sealed class BranchUpdateCommandValidator
     : AbstractValidator<BranchUpdateCommand>
@@ -100,13 +124,17 @@ public sealed class BranchUpdateCommandValidator
 
         RuleFor(x => x.Address)
             .MaximumLength(500);
+
+        RuleFor(x => x.TimeZoneId)
+            .MaximumLength(128);
     }
 }
 
 public sealed class BranchUpdateCommandHandler(
     IIdentityDbContext db,
     ITenantContext tenantContext,
-    IPermissionAuthorizationService authorizationService)
+    IPermissionAuthorizationService authorizationService,
+    ITimeZoneResolver timeZoneResolver)
     : ICommandHandler<BranchUpdateCommand>
 {
     public async Task Handle(
@@ -131,6 +159,19 @@ public sealed class BranchUpdateCommandHandler(
         branch.Name = command.Name.Trim();
         branch.Phone = Normalize(command.Phone);
         branch.Address = Normalize(command.Address);
+
+        if (!string.IsNullOrWhiteSpace(command.TimeZoneId))
+        {
+            var timeZoneId = command.TimeZoneId.Trim();
+
+            if (!timeZoneResolver.IsValidIanaTimeZoneId(timeZoneId))
+            {
+                throw new ValidationException(
+                    "The selected branch time zone is not a valid IANA time zone identifier.");
+            }
+
+            branch.TimeZoneId = timeZoneId;
+        }
 
         await db.SaveChangesAsync(cancellationToken);
     }
