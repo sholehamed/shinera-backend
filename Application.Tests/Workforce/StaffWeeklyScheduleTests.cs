@@ -387,6 +387,64 @@ public sealed class StaffWeeklyScheduleTests
         Assert.Empty(availability.AvailableSegments);
     }
 
+    [Fact]
+    public async Task Availability_InactiveStaffHasNoSegments()
+    {
+        await using var fixture = await CreateFixtureAsync();
+
+        var staff = await fixture.AddStaffAsync(
+            isActive: false);
+
+        var replace = new ReplaceStaffWeeklyScheduleCommandHandler(
+            fixture.Db,
+            fixture.TenantContext,
+            fixture.TenantAuthorization);
+
+        await replace.Handle(
+            new ReplaceStaffWeeklyScheduleCommand(
+                staff.Id,
+                BuildCompleteWeek()),
+            CancellationToken.None);
+
+        var service =
+            new StaffScheduleAvailabilityService(
+                fixture.Db);
+
+        var availability = await service.ResolveAsync(
+            staff.Id,
+            new DateOnly(2026, 10, 10));
+
+        Assert.True(availability.IsConfigured);
+        Assert.False(availability.IsStaffActive);
+        Assert.Empty(availability.AvailableSegments);
+    }
+
+    [Fact]
+    public async Task BranchScope_CannotManageWeeklySchedule()
+    {
+        await using var fixture = await CreateFixtureAsync();
+
+        var staff = await fixture.AddStaffAsync();
+
+        var authorization =
+            new ScopedAuthorizationService(
+                PermissionScopeType.Branch,
+                fixture.CurrentUserId);
+
+        var handler =
+            new ReplaceStaffWeeklyScheduleCommandHandler(
+                fixture.Db,
+                fixture.TenantContext,
+                authorization);
+
+        await Assert.ThrowsAsync<ForbiddenAccessException>(
+            () => handler.Handle(
+                new ReplaceStaffWeeklyScheduleCommand(
+                    staff.Id,
+                    BuildCompleteWeek()),
+                CancellationToken.None));
+    }
+
     private static List<StaffScheduleDayInput> BuildCompleteWeek() =>
     [
         WorkingDay(
@@ -584,7 +642,8 @@ public sealed class StaffWeeklyScheduleTests
                 currentUserId);
 
         public async Task<StaffEntity> AddStaffAsync(
-            Guid? linkedUserId = null)
+            Guid? linkedUserId = null,
+            bool isActive = true)
         {
             var staff = new StaffEntity(
                 TenantId,
@@ -592,7 +651,7 @@ public sealed class StaffWeeklyScheduleTests
                 "Staff",
                 Guid.NewGuid().ToString("N")[..11],
                 $"{Guid.NewGuid():N}@example.test",
-                true,
+                isActive,
                 linkedUserId);
 
             Db.Staff.Add(staff);
