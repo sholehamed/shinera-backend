@@ -78,6 +78,7 @@ public sealed class RegisterWorkspaceCommandValidator
                 .IsInEnum();
 
             RuleFor(x => x.Business!.Phone)
+                .NotEmpty()
                 .MaximumLength(32);
 
             RuleFor(x => x.Business!.Email)
@@ -88,9 +89,11 @@ public sealed class RegisterWorkspaceCommandValidator
                 .MaximumLength(256);
 
             RuleFor(x => x.Business!.City)
+                .NotEmpty()
                 .MaximumLength(150);
 
             RuleFor(x => x.Business!.Address)
+                .NotEmpty()
                 .MaximumLength(500);
         });
 
@@ -126,9 +129,11 @@ public sealed class RegisterWorkspaceCommandValidator
                 .MaximumLength(200);
 
             RuleFor(x => x.Branch!.Phone)
+                .NotEmpty()
                 .MaximumLength(32);
 
             RuleFor(x => x.Branch!.Address)
+                .NotEmpty()
                 .MaximumLength(500);
         });
     }
