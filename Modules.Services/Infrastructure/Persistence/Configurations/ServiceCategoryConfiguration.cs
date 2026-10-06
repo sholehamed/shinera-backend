@@ -21,8 +21,7 @@ internal sealed class ServiceCategoryConfiguration
             .IsRequired();
 
         builder.Property(x => x.IsActive)
-            .IsRequired()
-            .HasDefaultValue(true);
+            .IsRequired();
 
         builder.HasIndex(x => new
             {

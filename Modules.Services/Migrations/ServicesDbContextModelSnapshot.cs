@@ -29,7 +29,7 @@ namespace Modules.System.Services.Migrations
                     b.Property<Guid>("CreatedBy").HasColumnType("uniqueidentifier");
                     b.Property<string>("CreatedByIp").HasMaxLength(45).HasColumnType("nvarchar(45)");
                     b.Property<string>("Description").HasMaxLength(1000).HasColumnType("nvarchar(1000)");
-                    b.Property<bool>("IsActive").ValueGeneratedOnAdd().HasColumnType("bit").HasDefaultValue(true);
+                    b.Property<bool>("IsActive").HasColumnType("bit");
                     b.Property<DateTimeOffset?>("LastModifiedAt").HasColumnType("datetimeoffset");
                     b.Property<Guid?>("LastModifiedBy").HasColumnType("uniqueidentifier");
                     b.Property<string>("LastModifiedByIp").HasMaxLength(45).HasColumnType("nvarchar(45)");
@@ -54,7 +54,7 @@ namespace Modules.System.Services.Migrations
                     b.Property<string>("CreatedByIp").HasMaxLength(45).HasColumnType("nvarchar(45)");
                     b.Property<string>("Description").HasMaxLength(1000).HasColumnType("nvarchar(1000)");
                     b.Property<int>("DurationMinutes").HasColumnType("int");
-                    b.Property<bool>("IsActive").ValueGeneratedOnAdd().HasColumnType("bit").HasDefaultValue(true);
+                    b.Property<bool>("IsActive").HasColumnType("bit");
                     b.Property<DateTimeOffset?>("LastModifiedAt").HasColumnType("datetimeoffset");
                     b.Property<Guid?>("LastModifiedBy").HasColumnType("uniqueidentifier");
                     b.Property<string>("LastModifiedByIp").HasMaxLength(45).HasColumnType("nvarchar(45)");
