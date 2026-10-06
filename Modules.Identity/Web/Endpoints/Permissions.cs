@@ -1,4 +1,6 @@
 ﻿using Modules.System.Identity.Application.Features.Permissions.Commands;
+using Modules.System.Identity.Application.Authorization;
+using Web.SharedKernel.Authorization;
 using Modules.System.Identity.Application.Features.Permissions.Queries;
 
 namespace Modules.System.Identity.Web.Endpoints
@@ -8,15 +10,13 @@ namespace Modules.System.Identity.Web.Endpoints
         public override void Map(WebApplication app)
         {
             app.MapGroup(this)
-
-                .MapPost(PermissionPagedList, "{resourceId}/pagedList")
-                .MapGet(PermissionLookup, "lookup")
-                .MapGet(PermissionGetById, "{id:guid}")
-                .MapPost(PermissionCreate)
-                .MapPut(PermissionUpdate, "{id}")
-                .MapDelete(PermissionDelete, "{id}")
-                .MapPatch(PermissionChangeState, "{id}")
-            ;
+                .MapPost(PermissionPagedList, "{resourceId}/pagedList", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Permissions.Resource, SystemPermissionCatalog.Permissions.List))
+                .MapGet(PermissionLookup, "lookup", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Permissions.Resource, SystemPermissionCatalog.Permissions.List))
+                .MapGet(PermissionGetById, "{id:guid}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Permissions.Resource, SystemPermissionCatalog.Permissions.List))
+                .MapPost(PermissionCreate, configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Permissions.Resource, SystemPermissionCatalog.Permissions.Create))
+                .MapPut(PermissionUpdate, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Permissions.Resource, SystemPermissionCatalog.Permissions.Update))
+                .MapDelete(PermissionDelete, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Permissions.Resource, SystemPermissionCatalog.Permissions.Delete))
+                .MapPatch(PermissionChangeState, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Permissions.Resource, SystemPermissionCatalog.Permissions.Update));
         }
         public async Task<Ok<List<PermissionlookupDto>>> PermissionLookup(IDispatcher sender, string? text, CancellationToken ct)
         {

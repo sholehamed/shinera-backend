@@ -1,4 +1,6 @@
 ﻿using Modules.System.Identity.Application.Features.Tenants.Commands;
+using Modules.System.Identity.Application.Authorization;
+using Web.SharedKernel.Authorization;
 using Modules.System.Identity.Application.Features.Users.Commands;
 using Modules.System.Identity.Application.Features.Users.Queries;
 
@@ -10,17 +12,14 @@ public class Users : EndpointGroupBase
     public override void Map(WebApplication app)
     {
         app.MapGroup(this)
-
-            .MapPost(UserPagedList, "pagedList")
-            .MapGet(UserGetById, "{id}")
-            .MapGet(IsUsernameTaken, "isUserNameTaken")
-            .MapPost(UserCreate)
-            .MapPut(UserUpdate, "{id}")
-            .MapDelete(UserDelete, "{id}")
-            .MapPatch(UserChangeState, "{id}")
-            .MapPatch(UserChangeLockState, "{id}/changeLock")
-
-        ;
+            .MapPost(UserPagedList, "pagedList", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Users.Resource, SystemPermissionCatalog.Users.List))
+            .MapGet(UserGetById, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Users.Resource, SystemPermissionCatalog.Users.List))
+            .MapGet(IsUsernameTaken, "isUserNameTaken", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Users.Resource, SystemPermissionCatalog.Users.List))
+            .MapPost(UserCreate, configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Users.Resource, SystemPermissionCatalog.Users.Create))
+            .MapPut(UserUpdate, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Users.Resource, SystemPermissionCatalog.Users.Update))
+            .MapDelete(UserDelete, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Users.Resource, SystemPermissionCatalog.Users.Delete))
+            .MapPatch(UserChangeState, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Users.Resource, SystemPermissionCatalog.Users.Update))
+            .MapPatch(UserChangeLockState, "{id}/changeLock", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Users.Resource, SystemPermissionCatalog.Users.Update));
     }
 
     public async Task UserDelete(IDispatcher sender, Guid id)

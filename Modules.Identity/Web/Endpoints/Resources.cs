@@ -1,4 +1,6 @@
 ﻿using Modules.System.Identity.Application.Features.Resources.Commands;
+using Modules.System.Identity.Application.Authorization;
+using Web.SharedKernel.Authorization;
 using Modules.System.Identity.Application.Features.Resources.Queries;
 
 namespace Modules.System.Identity.Web.Endpoints
@@ -8,16 +10,14 @@ namespace Modules.System.Identity.Web.Endpoints
         public override void Map(WebApplication app)
         {
             app.MapGroup(this)
-
-                .MapPost(ResourcePagedList, "pagedList")
-                .MapGet(ResourceGetById, "{id}")
-                .MapGet(ResourceLookup, "lookup")
-                .MapGet(ResourceResourcesLookup, "{resourceId}/resources")
-                .MapPost(ResourceCreate)
-                .MapPut(ResourceUpdate, "{id}")
-                .MapDelete(ResourceDelete, "{id}")
-                .MapPatch(ResourceChangeState, "{id}")
-            ;
+                .MapPost(ResourcePagedList, "pagedList", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.List))
+                .MapGet(ResourceGetById, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.List))
+                .MapGet(ResourceLookup, "lookup", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.List))
+                .MapGet(ResourceResourcesLookup, "{resourceId}/resources", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.List))
+                .MapPost(ResourceCreate, configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Create))
+                .MapPut(ResourceUpdate, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Update))
+                .MapDelete(ResourceDelete, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Delete))
+                .MapPatch(ResourceChangeState, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Update));
         }
         public async Task ResourceChangeState(IDispatcher sender, Guid id)
         {

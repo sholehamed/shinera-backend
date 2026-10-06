@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Routing;
+using Modules.System.Identity.Application.Authorization;
+using Web.SharedKernel.Authorization;
 using Modules.System.Identity.Application.Features.Roles.Commands;
 using Modules.System.Identity.Application.Features.Roles.Queries;
 using Roles.System.Identity.Application.Features.Roles.Commands;
@@ -12,16 +14,15 @@ public class Roles : EndpointGroupBase
     public override void Map(WebApplication app)
     {
         app.MapGroup(this)
-             .MapPost(RolePagedList, "pagedList")
-                .MapGet(RoleGetById, "{id}")
-            .MapGet(RolesLookup, "lookup", configure: x => x.RequireAuthorization())
-            .MapGet(RolePermissionsTree, "{roleId}/permissions/tree", configure: x => x.RequireAuthorization())
-           .MapPost(RoleCreate)
-                .MapPut(RoleUpdate, "{id}")
-                .MapDelete(RoleDelete, "{id}")
-                .MapPatch(RoleChangeState, "{id}")
-                .MapPut(UpdateRolePermissions, "{roleId:guid}/permissions")
-        ;
+            .MapPost(RolePagedList, "pagedList", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Roles.Resource, SystemPermissionCatalog.Roles.List))
+            .MapGet(RoleGetById, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Roles.Resource, SystemPermissionCatalog.Roles.List))
+            .MapGet(RolesLookup, "lookup", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Roles.Resource, SystemPermissionCatalog.Roles.List))
+            .MapGet(RolePermissionsTree, "{roleId}/permissions/tree", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Roles.Resource, SystemPermissionCatalog.Roles.List))
+            .MapPost(RoleCreate, configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Roles.Resource, SystemPermissionCatalog.Roles.Create))
+            .MapPut(RoleUpdate, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Roles.Resource, SystemPermissionCatalog.Roles.Update))
+            .MapDelete(RoleDelete, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Roles.Resource, SystemPermissionCatalog.Roles.Delete))
+            .MapPatch(RoleChangeState, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Roles.Resource, SystemPermissionCatalog.Roles.Update))
+            .MapPut(UpdateRolePermissions, "{roleId:guid}/permissions", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Roles.Resource, SystemPermissionCatalog.Roles.Update));
     }
     public async Task<Results<NoContent, NotFound, BadRequest>> UpdateRolePermissions(IDispatcher sender, Guid roleId, UpdateRolePermissionsCommand command)
     {
