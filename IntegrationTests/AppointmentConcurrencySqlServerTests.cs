@@ -72,9 +72,8 @@ public sealed class AppointmentConcurrencySqlServerTests
                 """);
         }
 
-        var startGate =
-            new TaskCompletionSource(
-                TaskCreationOptions.RunContinuationsAsynchronously);
+        var startBarrier =
+            new AsyncStartBarrier(2);
 
         var first = ExecuteBookingAsync(
             connectionString,
@@ -85,7 +84,7 @@ public sealed class AppointmentConcurrencySqlServerTests
             staffId,
             serviceId,
             date,
-            startGate.Task);
+            startBarrier);
 
         var second = ExecuteBookingAsync(
             connectionString,
@@ -96,9 +95,7 @@ public sealed class AppointmentConcurrencySqlServerTests
             staffId,
             serviceId,
             date,
-            startGate.Task);
-
-        startGate.SetResult();
+            startBarrier);
 
         var results = await Task.WhenAll(
             first,
@@ -138,7 +135,7 @@ public sealed class AppointmentConcurrencySqlServerTests
         Guid staffId,
         Guid serviceId,
         DateOnly date,
-        Task startSignal)
+        AsyncStartBarrier startBarrier)
     {
         var tenantContext =
             CreateTenantContext(
@@ -198,7 +195,7 @@ public sealed class AppointmentConcurrencySqlServerTests
                 new AllowTenantAuthorizationService(),
                 new SqlServerStaffBookingConcurrencyGuard());
 
-        await startSignal;
+        await startBarrier.SignalAndWaitAsync();
 
         var result = await handler.Handle(
             new CreateAppointmentCommand(
@@ -284,6 +281,24 @@ public sealed class AppointmentConcurrencySqlServerTests
         throw new InvalidOperationException(
             "SQL Server did not become ready for the concurrency integration test.",
             lastError);
+    }
+
+    private sealed class AsyncStartBarrier(int participants)
+    {
+        private int _remaining = participants;
+
+        private readonly TaskCompletionSource _release =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task SignalAndWaitAsync()
+        {
+            if (Interlocked.Decrement(ref _remaining) == 0)
+            {
+                _release.TrySetResult();
+            }
+
+            return _release.Task;
+        }
     }
 
     private sealed class SlowFixedAvailabilityService(
