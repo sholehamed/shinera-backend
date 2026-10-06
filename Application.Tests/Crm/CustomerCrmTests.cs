@@ -1,4 +1,5 @@
 using Application.SharedKernel.Exceptions;
+using Application.SharedKernel.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
