@@ -10,10 +10,17 @@ internal sealed class StaffWeeklyScheduleDayConfiguration
     {
         builder.ToTable(
             "StaffWeeklyScheduleDays",
-            table => table.HasCheckConstraint(
-                "CK_StaffWeeklyScheduleDays_WorkingHours",
-                "([IsDayOff] = 1 AND [StartTime] IS NULL AND [EndTime] IS NULL) OR " +
-                "([IsDayOff] = 0 AND [StartTime] IS NOT NULL AND [EndTime] IS NOT NULL AND [StartTime] < [EndTime])"));
+            table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_StaffWeeklyScheduleDays_DayOfWeek",
+                    "[DayOfWeek] >= 0 AND [DayOfWeek] <= 6");
+
+                table.HasCheckConstraint(
+                    "CK_StaffWeeklyScheduleDays_WorkingHours",
+                    "([IsDayOff] = 1 AND [StartTime] IS NULL AND [EndTime] IS NULL) OR " +
+                    "([IsDayOff] = 0 AND [StartTime] IS NOT NULL AND [EndTime] IS NOT NULL AND [StartTime] < [EndTime])");
+            });
 
         builder.Property(x => x.DayOfWeek)
             .HasConversion<int>()
