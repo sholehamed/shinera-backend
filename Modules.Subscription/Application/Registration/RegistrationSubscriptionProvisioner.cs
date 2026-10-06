@@ -19,8 +19,17 @@ public sealed class RegistrationSubscriptionProvisioner(
         DbTransaction transaction,
         CancellationToken cancellationToken = default)
     {
-        // Join before the first command executes: the shared connection
-        // already has the Identity registration transaction open.
+        var transactionConnection = transaction.Connection
+            ?? throw new InvalidOperationException(
+                "The registration transaction has no active database connection.");
+
+        // Registration is the only cross-module workflow that needs a shared
+        // physical connection. Rebind this scoped context just for the
+        // workflow, then enlist it before the first command executes.
+        db.Database.SetDbConnection(
+            transactionConnection,
+            contextOwnsConnection: false);
+
         await db.Database.UseTransactionAsync(
             transaction,
             cancellationToken);
