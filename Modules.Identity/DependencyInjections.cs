@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Modules.System.Identity.Application.Abstractions;
 using Modules.System.Identity.Application.Authorization;
 using Modules.System.Identity.Application.Features.ApiResources.Services;
@@ -24,6 +26,8 @@ using Modules.System.Identity.Web.Util;
 using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading.RateLimiting;
 using Web.SharedKernel.Authorization;
 
 namespace Modules.System.Identity;
@@ -32,7 +36,8 @@ public static class DependencyInjections
 {
     public static IServiceCollection AddIdentityModule(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddScoped<ICurrentUser, CurrentUser>();
@@ -60,6 +65,28 @@ public static class DependencyInjections
         services.AddCustomCqrs<AppMappingProfile>(assembly);
 
         services.AddDataProtection();
+
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode =
+                StatusCodes.Status429TooManyRequests;
+
+            options.AddPolicy(
+                "shinera-auth-login",
+                httpContext =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey:
+                            httpContext.Connection.RemoteIpAddress?.ToString()
+                            ?? "unknown",
+                        factory: _ =>
+                            new FixedWindowRateLimiterOptions
+                            {
+                                PermitLimit = 10,
+                                Window = TimeSpan.FromMinutes(1),
+                                QueueLimit = 0,
+                                AutoReplenishment = true
+                            }));
+        });
 
         var allowedOrigins = configuration
             .GetSection("Identity:OpenIddict:AllowedOrigins")
@@ -117,8 +144,31 @@ public static class DependencyInjections
                 // secure defaults in OpenIddict and deliberately remain enabled.
                 // Token and authorization storage also remain enabled.
 
-                options.AddDevelopmentEncryptionCertificate()
-                    .AddDevelopmentSigningCertificate();
+                if (environment.IsDevelopment())
+                {
+                    options.AddDevelopmentEncryptionCertificate()
+                        .AddDevelopmentSigningCertificate();
+                }
+                else
+                {
+                    var signingCertificate =
+                        LoadRequiredCertificate(
+                            configuration,
+                            environment,
+                            "SigningCertificate");
+
+                    var encryptionCertificate =
+                        LoadRequiredCertificate(
+                            configuration,
+                            environment,
+                            "EncryptionCertificate");
+
+                    options.AddSigningCertificate(
+                        signingCertificate);
+
+                    options.AddEncryptionCertificate(
+                        encryptionCertificate);
+                }
 
                 options.UseAspNetCore()
                     .EnableAuthorizationEndpointPassthrough()
@@ -165,6 +215,7 @@ public static class DependencyInjections
         IConfiguration configuration)
     {
         app.UseCors("shinera-web");
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseMiddleware<TenantResolutionMiddleware>();
         app.UseAuthorization();
@@ -173,5 +224,37 @@ public static class DependencyInjections
         app.MapEndpoints($"{configuration["BackendPrefix"]}System");
 
         return app;
+    }
+
+    private static X509Certificate2 LoadRequiredCertificate(
+        IConfiguration configuration,
+        IHostEnvironment environment,
+        string certificateName)
+    {
+        var path = configuration[
+            $"Identity:OpenIddict:{certificateName}:Path"];
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new InvalidOperationException(
+                $"Identity:OpenIddict:{certificateName}:Path must be configured outside Development.");
+        }
+
+        var resolvedPath = Path.IsPathRooted(path)
+            ? path
+            : Path.Combine(environment.ContentRootPath, path);
+
+        if (!File.Exists(resolvedPath))
+        {
+            throw new InvalidOperationException(
+                $"OpenIddict {certificateName} file was not found.");
+        }
+
+        var password = configuration[
+            $"Identity:OpenIddict:{certificateName}:Password"];
+
+        return X509CertificateLoader.LoadPkcs12FromFile(
+            resolvedPath,
+            password);
     }
 }
