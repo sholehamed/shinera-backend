@@ -436,7 +436,10 @@ public sealed class RegistrationCommandTests
 
         var handler =
             new UpdateBusinessProfileCommandHandler(
-                fixture.Db);
+                fixture.Db,
+                fixture.TenantContext,
+                new StubPermissionAuthorizationService(
+                    PermissionScopeType.Tenant));
 
         await handler.Handle(
             new UpdateBusinessProfileCommand(
@@ -458,6 +461,61 @@ public sealed class RegistrationCommandTests
         Assert.Equal("New Type", profile.BusinessType);
         Assert.Equal(BusinessMode.Salon, profile.Mode);
         Assert.Equal("Tehran", profile.City);
+    }
+
+    [Fact]
+    public async Task BusinessProfile_Update_WithOnlyBranchScope_IsDenied()
+    {
+        await using var fixture = await CreateFixtureAsync();
+
+        var tenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        fixture.TenantContext.Initialize(
+            userId,
+            false,
+            [tenantId],
+            [tenantId],
+            tenantId);
+
+        using (fixture.TenantContext.DisableFilter())
+        {
+            fixture.Db.Tenants.Add(
+                new Tenant(tenantId)
+                {
+                    Name = "Tenant",
+                    Slug = $"tenant-{tenantId:N}"
+                });
+
+            fixture.Db.BusinessProfiles.Add(
+                new BusinessProfile(
+                    tenantId,
+                    "Profile",
+                    "Salon",
+                    BusinessMode.Salon));
+
+            await fixture.Db.SaveChangesAsync();
+        }
+
+        var handler =
+            new UpdateBusinessProfileCommandHandler(
+                fixture.Db,
+                fixture.TenantContext,
+                new StubPermissionAuthorizationService(
+                    PermissionScopeType.Branch));
+
+        await Assert.ThrowsAsync<ForbiddenAccessException>(
+            () => handler.Handle(
+                new UpdateBusinessProfileCommand(
+                    "Changed",
+                    "Salon",
+                    BusinessMode.Salon,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null),
+                CancellationToken.None));
     }
 
     private static RegisterWorkspaceCommand ValidCommand() =>
@@ -556,6 +614,52 @@ public sealed class RegistrationCommandTests
 
             await db.SaveChangesAsync();
         }
+    }
+
+    private sealed class StubPermissionAuthorizationService(
+        PermissionScopeType scope)
+        : IPermissionAuthorizationService
+    {
+        public Task<PermissionDecision> HasPermissionAsync(
+            Guid userId,
+            string resource,
+            string action,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(
+                PermissionDecision.Allow(
+                    $"{resource}.{action}",
+                    scope));
+
+        public Task<PermissionDecision> AuthorizeAsync(
+            Guid userId,
+            string resource,
+            string action,
+            PermissionScopeContext resourceContext,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(
+                PermissionDecision.Allow(
+                    $"{resource}.{action}",
+                    scope));
+
+        public Task<IReadOnlyList<EffectivePermissionDto>>
+            GetGrantedScopesAsync(
+                Guid userId,
+                string resource,
+                string action,
+                CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<EffectivePermissionDto>>(
+            [
+                new EffectivePermissionDto(
+                    $"{resource}.{action}",
+                    scope.ToString(),
+                    null)
+            ]);
+
+        public Task<IReadOnlyList<EffectivePermissionDto>>
+            GetEffectivePermissionsAsync(
+                Guid userId,
+                CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     private sealed class StubSubscriptionProvisioner(

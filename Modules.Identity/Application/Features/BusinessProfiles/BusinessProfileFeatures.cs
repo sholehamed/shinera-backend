@@ -1,4 +1,6 @@
+using Application.SharedKernel.Exceptions;
 using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Application.Authorization;
 using Modules.System.Identity.Domain.Entities;
 
 namespace Modules.System.Identity.Application.Features.BusinessProfiles;
@@ -20,13 +22,21 @@ public sealed record CurrentBusinessProfileQuery
     : IQuery<BusinessProfileDto>;
 
 public sealed class CurrentBusinessProfileQueryHandler(
-    IIdentityDbContext db)
+    IIdentityDbContext db,
+    ITenantContext tenantContext,
+    IPermissionAuthorizationService authorizationService)
     : IQueryHandler<CurrentBusinessProfileQuery, BusinessProfileDto>
 {
     public async Task<BusinessProfileDto> Handle(
         CurrentBusinessProfileQuery request,
         CancellationToken cancellationToken)
     {
+        await BusinessProfilePermissionGuard.RequireTenantScopeAsync(
+            authorizationService,
+            tenantContext,
+            SystemPermissionCatalog.BusinessProfile.View,
+            cancellationToken);
+
         var profile = await db.BusinessProfiles
             .AsNoTracking()
             .Select(x => new BusinessProfileDto(
@@ -96,13 +106,21 @@ public sealed class UpdateBusinessProfileCommandValidator
 }
 
 public sealed class UpdateBusinessProfileCommandHandler(
-    IIdentityDbContext db)
+    IIdentityDbContext db,
+    ITenantContext tenantContext,
+    IPermissionAuthorizationService authorizationService)
     : ICommandHandler<UpdateBusinessProfileCommand>
 {
     public async Task Handle(
         UpdateBusinessProfileCommand command,
         CancellationToken cancellationToken)
     {
+        await BusinessProfilePermissionGuard.RequireTenantScopeAsync(
+            authorizationService,
+            tenantContext,
+            SystemPermissionCatalog.BusinessProfile.Update,
+            cancellationToken);
+
         var profile = await db.BusinessProfiles
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -126,4 +144,34 @@ public sealed class UpdateBusinessProfileCommandHandler(
         string.IsNullOrWhiteSpace(value)
             ? null
             : value.Trim();
+}
+
+internal static class BusinessProfilePermissionGuard
+{
+    public static async Task RequireTenantScopeAsync(
+        IPermissionAuthorizationService authorizationService,
+        ITenantContext tenantContext,
+        string action,
+        CancellationToken cancellationToken)
+    {
+        var userId = tenantContext.UserId
+            ?? throw new TenantAccessException(
+                "tenant.user_context_invalid",
+                "The authenticated user context is invalid.");
+
+        var grants = await authorizationService.GetGrantedScopesAsync(
+            userId,
+            SystemPermissionCatalog.BusinessProfile.Resource,
+            action,
+            cancellationToken);
+
+        if (!grants.Any(x =>
+                string.Equals(
+                    x.Scope,
+                    PermissionScopeType.Tenant.ToString(),
+                    StringComparison.Ordinal)))
+        {
+            throw new ForbiddenAccessException();
+        }
+    }
 }
