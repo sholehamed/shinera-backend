@@ -9,6 +9,7 @@ using Modules.System.Crm.Domain.Entities;
 using Modules.System.Crm.Infrastructure.Persistence.Contexts;
 using Modules.System.Identity.Application.Authorization;
 using Modules.System.Identity.Application.Services;
+using Modules.System.Identity.Domain.Entities;
 
 namespace IntegrationTests;
 
