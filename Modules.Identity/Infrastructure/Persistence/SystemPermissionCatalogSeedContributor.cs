@@ -22,6 +22,16 @@ public sealed class SystemPermissionCatalogSeedContributor
                 SystemPermissionCatalog.Tenants.Delete
             ]),
         new(
+            SystemPermissionCatalog.Branches.Resource,
+            "Branches",
+            [
+                SystemPermissionCatalog.Branches.List,
+                SystemPermissionCatalog.Branches.Create,
+                SystemPermissionCatalog.Branches.Update,
+                SystemPermissionCatalog.Branches.Disable,
+                SystemPermissionCatalog.Branches.SetMain
+            ]),
+        new(
             SystemPermissionCatalog.Modules.Resource,
             "Modules",
             [
