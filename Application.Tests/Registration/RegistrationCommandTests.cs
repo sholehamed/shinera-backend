@@ -22,6 +22,31 @@ namespace Application.Tests.Registration;
 public sealed class RegistrationCommandTests
 {
     [Fact]
+    public async Task Validator_MissingNestedSections_ReturnsValidationErrors()
+    {
+        var validator =
+            new RegisterWorkspaceCommandValidator();
+
+        var result = await validator.ValidateAsync(
+            new RegisterWorkspaceCommand(
+                "salon-pro",
+                null,
+                null,
+                null));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(
+            result.Errors,
+            x => x.PropertyName == "Business");
+        Assert.Contains(
+            result.Errors,
+            x => x.PropertyName == "Owner");
+        Assert.Contains(
+            result.Errors,
+            x => x.PropertyName == "Branch");
+    }
+
+    [Fact]
     public async Task Register_CreatesCompleteWorkspaceGraph()
     {
         await using var fixture = await CreateFixtureAsync();
