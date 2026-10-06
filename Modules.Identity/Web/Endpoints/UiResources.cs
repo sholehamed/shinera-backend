@@ -1,4 +1,6 @@
 ﻿using Modules.System.Identity.Application.Features.UiResources.Commands;
+using Modules.System.Identity.Application.Authorization;
+using Web.SharedKernel.Authorization;
 using Modules.System.Identity.Application.Features.UiResources.Queries;
 
 namespace Modules.System.Identity.Web.Endpoints
@@ -8,15 +10,13 @@ namespace Modules.System.Identity.Web.Endpoints
         public override void Map(WebApplication app)
         {
             app.MapGroup(this)
-
-                .MapPost(UiResourcePagedList, "{resourceId}/pagedList")
-                .MapGet(UiResourceGetById, "{id}")
-                .MapGet(UiResourceLookup, "lookup")
-                .MapPost(UiResourceCreate)
-                .MapPut(UiResourceUpdate, "{id}")
-                .MapDelete(UiResourceDelete, "{id}")
-                .MapPatch(UiResourceChangeState, "{id}")
-            ;
+                .MapPost(UiResourcePagedList, "{resourceId}/pagedList", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.List))
+                .MapGet(UiResourceGetById, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.List))
+                .MapGet(UiResourceLookup, "lookup", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.List))
+                .MapPost(UiResourceCreate, configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Create))
+                .MapPut(UiResourceUpdate, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Update))
+                .MapDelete(UiResourceDelete, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Delete))
+                .MapPatch(UiResourceChangeState, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Update));
         }
         public async Task UiResourceChangeState(IDispatcher sender, Guid id)
         {

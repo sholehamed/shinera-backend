@@ -1,4 +1,6 @@
 ﻿using Groups.System.Identity.Application.Features.Groups.Commands;
+using Modules.System.Identity.Application.Authorization;
+using Web.SharedKernel.Authorization;
 using Groups.System.Identity.Application.Features.Groups.Queries;
 using Modules.System.Identity.Application.Features.Groups.Commands;
 using Modules.System.Identity.Application.Features.Groups.Queries;
@@ -11,18 +13,16 @@ namespace Groups.System.Identity.Web.Endpoints
         public override void Map(WebApplication app)
         {
             app.MapGroup(this)
-
-                .MapPost(GroupPagedList, "pagedList")
-                .MapGet(GroupGetById, "{id}")
-                .MapPost(GroupMembers, "{groupId:guid}/members")
-                .MapGet(GroupLookup, "lookup")
-                .MapGet(SearchUserToAddGroup, "searchmembers")
-                .MapPost(GroupCreate)
-                .MapPut(GroupUpdate, "{id}")
-                .MapDelete(GroupDelete, "{id}")
-                .MapPatch(GroupChangeState, "{id}")
-                .MapPost(AddGroupMembers, "{GroupId}/addmembers")
-            ;
+                .MapPost(GroupPagedList, "pagedList", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Groups.Resource, SystemPermissionCatalog.Groups.List))
+                .MapGet(GroupGetById, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Groups.Resource, SystemPermissionCatalog.Groups.List))
+                .MapPost(GroupMembers, "{groupId:guid}/members", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Groups.Resource, SystemPermissionCatalog.Groups.List))
+                .MapGet(GroupLookup, "lookup", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Groups.Resource, SystemPermissionCatalog.Groups.List))
+                .MapGet(SearchUserToAddGroup, "searchmembers", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Groups.Resource, SystemPermissionCatalog.Groups.Update))
+                .MapPost(GroupCreate, configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Groups.Resource, SystemPermissionCatalog.Groups.Create))
+                .MapPut(GroupUpdate, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Groups.Resource, SystemPermissionCatalog.Groups.Update))
+                .MapDelete(GroupDelete, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Groups.Resource, SystemPermissionCatalog.Groups.Delete))
+                .MapPatch(GroupChangeState, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Groups.Resource, SystemPermissionCatalog.Groups.Update))
+                .MapPost(AddGroupMembers, "{GroupId}/addmembers", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Groups.Resource, SystemPermissionCatalog.Groups.Update));
         }
         public async Task<NoContent> AddGroupMembers(IDispatcher sender,Guid GroupId, AddGroupMembersCommand parameter, CancellationToken cancellationToken)
         {

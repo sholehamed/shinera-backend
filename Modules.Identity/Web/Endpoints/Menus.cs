@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Routing;
+using Modules.System.Identity.Application.Authorization;
+using Web.SharedKernel.Authorization;
 using Modules.System.Identity.Application.Features.Menus.Commands;
 using Modules.System.Identity.Application.Features.Menus.Queries;
 
@@ -10,14 +12,13 @@ public class Menus : EndpointGroupBase
     public override void Map(WebApplication app)
     {
         app.MapGroup(this)
-            .MapPost(ReorderMenus, "reorder")
-            .MapGet(GetUserMenus, "getUserMenus", configure: x => x.RequireAuthorization())
-            .MapGet(MenuGetById, "{id}")
-            .MapPost(MenuGetPagedList, "pagedList")
-            .MapPost(MenuCreate)
-            .MapPut(MenuUpdate, "{id}")
-            .MapDelete(MenuDelete, "{id}")
-        ;
+            .MapPost(ReorderMenus, "reorder", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.Update))
+            .MapGet(GetUserMenus, "getUserMenus")
+            .MapGet(MenuGetById, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.List))
+            .MapPost(MenuGetPagedList, "pagedList", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.List))
+            .MapPost(MenuCreate, configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.Create))
+            .MapPut(MenuUpdate, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.Update))
+            .MapDelete(MenuDelete, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.Delete));
     }
     public async Task ReorderMenus(IDispatcher sender,MenuReorderCommand request,CancellationToken ct)
     {

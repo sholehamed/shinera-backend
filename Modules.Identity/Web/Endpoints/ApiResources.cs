@@ -1,4 +1,6 @@
 ﻿using Modules.System.Identity.Application.Features.ApiResources.Commands;
+using Modules.System.Identity.Application.Authorization;
+using Web.SharedKernel.Authorization;
 using Modules.System.Identity.Application.Features.ApiResources.Queries;
 
 namespace Modules.System.Identity.Web.Endpoints
@@ -8,16 +10,14 @@ namespace Modules.System.Identity.Web.Endpoints
         public override void Map(WebApplication app)
         {
             app.MapGroup(this)
-
-                .MapPost(ApiResourcePagedList, "{resourceId}/pagedList")
-                .MapPatch(ApiResourceSync, "{resourceId}/sync")
-                .MapGet(ApiResourceGetById, "{id}")
-                .MapGet(ApiResourceLookup, "lookup")
-                .MapPost(ApiResourceCreate,displayName:"ایجاد api جدید")
-                .MapPut(ApiResourceUpdate, "{id}")
-                .MapDelete(ApiResourceDelete, "{id}")
-                .MapPatch(ApiResourceChangeState, "{id}")
-            ;
+                .MapPost(ApiResourcePagedList, "{resourceId}/pagedList", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.List))
+                .MapPatch(ApiResourceSync, "{resourceId}/sync", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Update))
+                .MapGet(ApiResourceGetById, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.List))
+                .MapGet(ApiResourceLookup, "lookup", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.List))
+                .MapPost(ApiResourceCreate, displayName: "ایجاد api جدید", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Create))
+                .MapPut(ApiResourceUpdate, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Update))
+                .MapDelete(ApiResourceDelete, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Delete))
+                .MapPatch(ApiResourceChangeState, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Resources.Resource, SystemPermissionCatalog.Resources.Update));
         }
         public async Task ApiResourceSync(IDispatcher sender,Guid resourceId)
         {
