@@ -147,13 +147,16 @@ public sealed class SystemPermissionCatalogSeedContributorTests
                     .Where(code =>
                         code.StartsWith("services.") ||
                         code.StartsWith("staff.") ||
-                        code.StartsWith("customers."))
+                        code.StartsWith("customers.") ||
+                        code.StartsWith("appointments."))
                     .OrderBy(code => code)
                     .ToListAsync();
 
             Assert.Equal(
                 new[]
                 {
+                    "appointments.create",
+                    "appointments.view",
                     "customers.add_note",
                     "customers.create",
                     "customers.view",
@@ -254,7 +257,8 @@ public sealed class SystemPermissionCatalogSeedContributorTests
                     .CountAsync(code =>
                         code.StartsWith("services.") ||
                         code.StartsWith("staff.") ||
-                        code.StartsWith("customers."));
+                        code.StartsWith("customers.") ||
+                        code.StartsWith("appointments."));
 
             Assert.Equal(
                 0,
