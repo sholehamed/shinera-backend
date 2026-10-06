@@ -155,6 +155,29 @@ public sealed class SystemPermissionCatalogSeedContributor
                     db.Permissions.Add(permission);
                     await db.SaveChangesAsync();
                 }
+                else
+                {
+                    var changed = false;
+
+                    if (permission.ResourceId != resource.Id)
+                    {
+                        permission.ResourceId = resource.Id;
+                        permission.Resource = resource;
+                        changed = true;
+                    }
+
+                    if (!string.Equals(
+                            permission.Action,
+                            action,
+                            StringComparison.Ordinal))
+                    {
+                        permission.Action = action;
+                        changed = true;
+                    }
+
+                    if (changed)
+                        await db.SaveChangesAsync();
+                }
 
                 permissions.Add(permission);
             }
