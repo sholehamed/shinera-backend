@@ -160,7 +160,7 @@ public sealed class RegisterWorkspaceCommandHandler(
                 SystemPermissionCatalog.WorkspaceOwnerPermissionKeys.Length)
             {
                 return Result<RegistrationResult>.Failure(
-                    Error.Failure(
+                    new Error(
                         "registration.permission_catalog_incomplete",
                         "The workspace permission catalog is not ready."));
             }
@@ -268,7 +268,6 @@ public sealed class RegisterWorkspaceCommandHandler(
                 if (subscriptionResult.IsFailure)
                 {
                     await transaction.RollbackAsync(cancellationToken);
-                    db.ChangeTracker.Clear();
 
                     return Result<RegistrationResult>.Failure(
                         subscriptionResult.Error);
@@ -294,7 +293,6 @@ public sealed class RegisterWorkspaceCommandHandler(
             catch
             {
                 await transaction.RollbackAsync(cancellationToken);
-                db.ChangeTracker.Clear();
                 throw;
             }
         }
