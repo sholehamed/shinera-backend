@@ -101,6 +101,10 @@ namespace Modules.System.Workforce.Migrations
                     b.ToTable("StaffWeeklyScheduleDays", t =>
                         {
                             t.HasCheckConstraint(
+                                "CK_StaffWeeklyScheduleDays_DayOfWeek",
+                                "[DayOfWeek] >= 0 AND [DayOfWeek] <= 6");
+
+                            t.HasCheckConstraint(
                                 "CK_StaffWeeklyScheduleDays_WorkingHours",
                                 "([IsDayOff] = 1 AND [StartTime] IS NULL AND [EndTime] IS NULL) OR ([IsDayOff] = 0 AND [StartTime] IS NOT NULL AND [EndTime] IS NOT NULL AND [StartTime] < [EndTime])");
                         });
