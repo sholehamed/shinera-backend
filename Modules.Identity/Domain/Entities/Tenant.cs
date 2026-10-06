@@ -8,6 +8,7 @@ public class Tenant : AuditableEntity
     public virtual Tenant? Parent { get; set; }
     public string Name { get; set; } = default!;
     public string Slug { get; set; } = default!;
+    public string DefaultTimeZoneId { get; set; } = "Etc/UTC";
     public string? Domain { get; set; }
     public Guid? Favicon { get; set; }
     public Guid? Logo { get; set; }
