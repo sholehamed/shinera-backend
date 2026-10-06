@@ -46,24 +46,22 @@ public sealed class StaffWeeklyScheduleQueryHandler(
         StaffWeeklyScheduleQuery query,
         CancellationToken cancellationToken)
     {
-        await WorkforcePermissionGuard.RequireTenantScopeAsync(
-            authorizationService,
-            currentTenant,
-            SystemPermissionCatalog.Staff.ViewSchedule,
-            cancellationToken);
-
-        var staffExists = await db.Staff
+        var staff = await db.Staff
             .AsNoTracking()
-            .AnyAsync(
+            .SingleOrDefaultAsync(
                 x => x.Id == query.StaffId,
                 cancellationToken);
 
-        if (!staffExists)
-        {
-            throw new NotFoundException(
-                nameof(Staff),
-                query.StaffId.ToString());
-        }
+        Guard.Against.NotFound(
+            query.StaffId,
+            staff);
+
+        await SchedulePermissionGuard.RequireAccessAsync(
+            authorizationService,
+            currentTenant,
+            staff.UserId,
+            SystemPermissionCatalog.Staff.ViewSchedule,
+            cancellationToken);
 
         var days = await db.StaffWeeklyScheduleDays
             .AsNoTracking()
@@ -257,29 +255,27 @@ public sealed class ReplaceStaffWeeklyScheduleCommandHandler(
         ReplaceStaffWeeklyScheduleCommand command,
         CancellationToken cancellationToken)
     {
-        await WorkforcePermissionGuard.RequireTenantScopeAsync(
-            authorizationService,
-            currentTenant,
-            SystemPermissionCatalog.Staff.UpdateSchedule,
-            cancellationToken);
-
         var tenantId = currentTenant.TenantId
             ?? throw new TenantAccessException(
                 "tenant.context_missing",
                 "A tenant context is required for workforce operations.");
 
-        var staffExists = await db.Staff
+        var staff = await db.Staff
             .AsNoTracking()
-            .AnyAsync(
+            .SingleOrDefaultAsync(
                 x => x.Id == command.StaffId,
                 cancellationToken);
 
-        if (!staffExists)
-        {
-            throw new NotFoundException(
-                nameof(Staff),
-                command.StaffId.ToString());
-        }
+        Guard.Against.NotFound(
+            command.StaffId,
+            staff);
+
+        await SchedulePermissionGuard.RequireAccessAsync(
+            authorizationService,
+            currentTenant,
+            staff.UserId,
+            SystemPermissionCatalog.Staff.UpdateSchedule,
+            cancellationToken);
 
         var requestedDays =
             (command.Days ?? [])
