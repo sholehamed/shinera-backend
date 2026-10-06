@@ -73,7 +73,11 @@ public sealed class BranchCreateCommandHandler(
         if (!timeZoneResolver.IsValidIanaTimeZoneId(timeZoneId))
         {
             throw new global::Application.SharedKernel.Exceptions.ValidationException(
-                "The selected branch time zone is not a valid IANA time zone identifier.");
+                [
+                    new FluentValidation.Results.ValidationFailure(
+                        nameof(command.TimeZoneId),
+                        "The selected branch time zone is not a valid IANA time zone identifier.")
+                ]);
         }
 
         var branch = new Branch(
