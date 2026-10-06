@@ -31,5 +31,26 @@ jobs:
       - name: Build
         run: dotnet build shinera-back.slnx --configuration Release --no-restore
 
+      - name: Install EF Core CLI
+        run: dotnet tool install --global dotnet-ef --version 10.0.10
+
+      - name: Verify Identity migration chain
+        run: |
+          dotnet ef migrations script --idempotent \
+            --project Modules.Identity/Modules.Identity.csproj \
+            --startup-project Web/Web.csproj \
+            --context IdentityDbContext \
+            --output /tmp/identity-migrations.sql
+          test -s /tmp/identity-migrations.sql
+
+      - name: Verify Subscription migration chain
+        run: |
+          dotnet ef migrations script --idempotent \
+            --project Modules.Subscription/Modules.Subscription.csproj \
+            --startup-project Web/Web.csproj \
+            --context SubscriptionDbContext \
+            --output /tmp/subscription-migrations.sql
+          test -s /tmp/subscription-migrations.sql
+
       - name: Test
         run: dotnet test shinera-back.slnx --configuration Release --no-build --verbosity normal
