@@ -169,11 +169,11 @@ public sealed class CreateAppointmentCommandHandler(
         }
 
         var hasConflict = await db.Appointments
+            .Where(AppointmentBookingRules.BlockingPredicate)
             .AnyAsync(
                 x =>
                     x.StaffId == command.StaffId &&
                     x.Date == command.Date &&
-                    AppointmentBookingRules.BlockingStatuses.Contains(x.Status) &&
                     x.StartUtc < slot.Value.EndUtc &&
                     x.EndUtc > slot.Value.StartUtc,
                 cancellationToken);
