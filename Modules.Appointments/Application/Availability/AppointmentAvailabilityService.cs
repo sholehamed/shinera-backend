@@ -1,4 +1,5 @@
 using Modules.System.Appointments.Application.Abstractions;
+using Modules.System.Appointments.Domain;
 using Modules.System.Appointments.Domain.Entities;
 using Modules.System.Identity.Application.Abstractions;
 using Modules.System.Services.Application.Abstractions;
@@ -41,13 +42,6 @@ public sealed class AppointmentAvailabilityService(
     ITimeZoneResolver timeZoneResolver)
     : IAppointmentAvailabilityService
 {
-    private static readonly AppointmentStatus[] BlockingStatuses =
-    [
-        AppointmentStatus.Pending,
-        AppointmentStatus.Confirmed,
-        AppointmentStatus.Upcoming,
-        AppointmentStatus.InProgress
-    ];
 
     public async Task<Result<IReadOnlyList<TimeOnly>>> GetAvailableSlotsAsync(
         Guid branchId,
@@ -138,7 +132,7 @@ public sealed class AppointmentAvailabilityService(
             .Where(x =>
                 eligibleStaffIds.Contains(x.StaffId) &&
                 x.Date == date &&
-                BlockingStatuses.Contains(x.Status))
+                AppointmentBookingRules.BlockingStatuses.Contains(x.Status))
             .Select(x => new BusyRange(
                 x.StaffId,
                 x.StartUtc,
