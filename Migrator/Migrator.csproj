@@ -12,6 +12,7 @@
     <ProjectReference Include="..\Modules.Identity\Modules.Identity.csproj" />
     <ProjectReference Include="..\Modules.Subscription\Modules.Subscription.csproj" />
     <ProjectReference Include="..\Modules.Services\Modules.Services.csproj" />
+    <ProjectReference Include="..\Modules.Workforce\Modules.Workforce.csproj" />
   </ItemGroup>
 
 </Project>

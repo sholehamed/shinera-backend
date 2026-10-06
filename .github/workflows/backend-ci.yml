@@ -61,5 +61,14 @@ jobs:
             --output /tmp/services-migrations.sql
           test -s /tmp/services-migrations.sql
 
+      - name: Verify Workforce migration chain
+        run: |
+          dotnet ef migrations script --idempotent \
+            --project Modules.Workforce/Modules.Workforce.csproj \
+            --startup-project Web/Web.csproj \
+            --context WorkforceDbContext \
+            --output /tmp/workforce-migrations.sql
+          test -s /tmp/workforce-migrations.sql
+
       - name: Test
         run: dotnet test shinera-back.slnx --configuration Release --no-build --verbosity normal

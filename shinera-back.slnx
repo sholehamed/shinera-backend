@@ -14,6 +14,7 @@
     <Project Path="Modules.Identity/Modules.Identity.csproj" Id="192171e9-9683-4ec7-b6c0-96d72033a256" />
     <Project Path="Modules.Subscription/Modules.Subscription.csproj" Id="79d6f437-d75d-4ce4-92cb-fadfb0f87007" />
     <Project Path="Modules.Services/Modules.Services.csproj" Id="b0e4654f-802e-4df8-b95f-17e1cbd82dc1" />
+    <Project Path="Modules.Workforce/Modules.Workforce.csproj" Id="e7b17a2c-93a3-4c53-b9fb-9b4fd0f51c7d" />
     <Project Path="Modules.MediaStorage/Modules.MediaStorage.csproj" Id="9004061e-f61f-45d8-9d54-7d0b3cfeb06a" />
     <Project Path="Scalar.ClientGeneration/Scalar.ClientGeneration.csproj" Id="2e068048-f0fd-4e29-8746-7f39a2becf21" />
   </Folder>
