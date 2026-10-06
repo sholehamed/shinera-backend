@@ -4,6 +4,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
+using Modules.System.Subscription.Application.Registration;
+using Modules.System.Subscription.Domain.Entities;
+using Modules.System.Subscription.Infrastructure.Persistence.Contexts;
 using Modules.System.Identity.Application.Authorization;
 using Modules.System.Identity.Application.Features.BusinessProfiles;
 using Modules.System.Identity.Application.Features.Registration.Commands;
@@ -255,6 +260,101 @@ public sealed class RegistrationCommandTests
     }
 
     [Fact]
+    public async Task SubscriptionProvisioner_JoinsIdentityTransaction_AndRollsBackAtomically()
+    {
+        var tenantContext = new TenantContext();
+
+        await using var connection =
+            new SqliteConnection("Data Source=:memory:");
+
+        await connection.OpenAsync();
+
+        var identityOptions =
+            new DbContextOptionsBuilder<IdentityDbContext>()
+                .UseSqlite(connection)
+                .Options;
+
+        var subscriptionOptions =
+            new DbContextOptionsBuilder<SubscriptionDbContext>()
+                .UseSqlite(connection)
+                .Options;
+
+        await using var identityDb =
+            new RegistrationTestDbContext(
+                identityOptions,
+                tenantContext);
+
+        await identityDb.Database.EnsureCreatedAsync();
+
+        await using var subscriptionDb =
+            new RegistrationSubscriptionTestDbContext(
+                subscriptionOptions,
+                tenantContext);
+
+        var creator = subscriptionDb.Database
+            .GetService<IRelationalDatabaseCreator>();
+
+        await creator.CreateTablesAsync();
+
+        var plan = new Plan(
+            "salon-pro",
+            "Salon Pro");
+
+        subscriptionDb.Plans.Add(plan);
+        await subscriptionDb.SaveChangesAsync();
+
+        var tenantId = Guid.NewGuid();
+
+        using (tenantContext.DisableFilter())
+        {
+            await using var transaction =
+                await identityDb.Database
+                    .BeginTransactionAsync();
+
+            identityDb.Tenants.Add(
+                new Tenant(tenantId)
+                {
+                    Name = "Atomic Tenant",
+                    Slug = $"tenant-{tenantId:N}"
+                });
+
+            await identityDb.SaveChangesAsync();
+
+            var provisioner =
+                new RegistrationSubscriptionProvisioner(
+                    subscriptionDb);
+
+            var provisionResult =
+                await provisioner.ProvisionAsync(
+                    tenantId,
+                    "salon-pro",
+                    DateTimeOffset.UtcNow,
+                    transaction.GetDbTransaction());
+
+            Assert.True(provisionResult.IsSuccess);
+
+            await transaction.RollbackAsync();
+        }
+
+        identityDb.ChangeTracker.Clear();
+        subscriptionDb.ChangeTracker.Clear();
+
+        using (tenantContext.DisableFilter())
+        {
+            Assert.False(
+                await identityDb.Tenants
+                    .AsNoTracking()
+                    .AnyAsync(x => x.Id == tenantId));
+
+            Assert.False(
+                await subscriptionDb.Subscriptions
+                    .IgnoreQueryFilters(["tenant"])
+                    .AsNoTracking()
+                    .AnyAsync(x => x.TenantId == tenantId));
+        }
+    }
+
+    [Fact]
     public async Task BusinessProfile_Update_ChangesCurrentTenantProfile()
     {
         await using var fixture = await CreateFixtureAsync();
@@ -436,6 +536,31 @@ public sealed class RegistrationCommandTests
         DbContextOptions<IdentityDbContext> options,
         TenantContext tenantContext)
         : IdentityDbContext(options, tenantContext)
+    {
+        protected override void OnModelCreating(
+            ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            foreach (var entityType in
+                     builder.Model.GetEntityTypes())
+            {
+                var rowVersion =
+                    entityType.FindProperty("RowVersion");
+
+                if (rowVersion is not null)
+                {
+                    rowVersion.ValueGenerated =
+                        ValueGenerated.Never;
+                }
+            }
+        }
+    }
+
+    private sealed class RegistrationSubscriptionTestDbContext(
+        DbContextOptions<SubscriptionDbContext> options,
+        TenantContext tenantContext)
+        : SubscriptionDbContext(options, tenantContext)
     {
         protected override void OnModelCreating(
             ModelBuilder builder)
