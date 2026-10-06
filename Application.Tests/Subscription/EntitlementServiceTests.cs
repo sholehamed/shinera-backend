@@ -26,7 +26,7 @@ public sealed class EntitlementServiceTests
                 new FeatureSeed(
                     FeatureKeys.AdvancedReports,
                     FeatureKind.Boolean,
-                    isEnabled: true)
+                    IsEnabled: true)
             ]);
 
         var decision = await fixture.Service.HasFeatureAsync(
@@ -72,7 +72,7 @@ public sealed class EntitlementServiceTests
                 new FeatureSeed(
                     FeatureKeys.AdvancedReports,
                     FeatureKind.Boolean,
-                    isEnabled: true)
+                    IsEnabled: true)
             ]);
 
         var decision = await fixture.Service.HasFeatureAsync(
@@ -114,7 +114,7 @@ public sealed class EntitlementServiceTests
                 new FeatureSeed(
                     FeatureKeys.AdvancedReports,
                     FeatureKind.Boolean,
-                    isEnabled: true)
+                    IsEnabled: true)
             ]);
 
         var decision = await fixture.Service.HasFeatureAsync(
@@ -138,8 +138,8 @@ public sealed class EntitlementServiceTests
                 new FeatureSeed(
                     FeatureKeys.AdvancedReports,
                     FeatureKind.Boolean,
-                    isEnabled: true,
-                    featureIsActive: false)
+                    IsEnabled: true,
+                    FeatureIsActive: false)
             ]);
 
         var decision = await fixture.Service.HasFeatureAsync(
@@ -166,7 +166,7 @@ public sealed class EntitlementServiceTests
                 new FeatureSeed(
                     LimitKeys.MaxBranches,
                     FeatureKind.Limit,
-                    limitValue: 1)
+                    LimitValue: 1)
             ]);
 
         var below = await fixture.Service.CheckLimitAsync(
@@ -233,7 +233,7 @@ public sealed class EntitlementServiceTests
                 new FeatureSeed(
                     FeatureKeys.AdvancedReports,
                     FeatureKind.Boolean,
-                    isEnabled: true)
+                    IsEnabled: true)
             ]);
 
         var connection = fixtureA.Connection;
@@ -285,7 +285,7 @@ public sealed class EntitlementServiceTests
                 new PlanFeature(
                     planId,
                     feature.Id,
-                    isEnabled: true));
+                    IsEnabled: true));
 
             await fixture.Db.SaveChangesAsync();
         }
