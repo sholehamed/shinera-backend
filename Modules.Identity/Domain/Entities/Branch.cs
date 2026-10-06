@@ -15,7 +15,8 @@ public sealed class Branch : AuditableEntity, IMustHaveTenant
         string? phone = null,
         string? address = null,
         bool isMain = false,
-        bool isActive = true) : base(23)
+        bool isActive = true,
+        string timeZoneId = "Etc/UTC") : base(23)
     {
         TenantId = tenantId;
         Name = name;
@@ -23,12 +24,14 @@ public sealed class Branch : AuditableEntity, IMustHaveTenant
         Address = address;
         IsMain = isMain;
         IsActive = isActive;
+        TimeZoneId = timeZoneId.Trim();
     }
 
     public Guid TenantId { get; set; }
     public string Name { get; set; } = default!;
     public string? Phone { get; set; }
     public string? Address { get; set; }
+    public string TimeZoneId { get; set; } = "Etc/UTC";
     public bool IsMain { get; set; }
     public bool IsActive { get; set; } = true;
 
