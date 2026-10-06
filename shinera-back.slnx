@@ -12,6 +12,7 @@
   </Folder>
   <Folder Name="/src/modules/">
     <Project Path="Modules.Identity/Modules.Identity.csproj" Id="192171e9-9683-4ec7-b6c0-96d72033a256" />
+    <Project Path="Modules.Subscription/Modules.Subscription.csproj" Id="79d6f437-d75d-4ce4-92cb-fadfb0f87007" />
     <Project Path="Modules.MediaStorage/Modules.MediaStorage.csproj" Id="9004061e-f61f-45d8-9d54-7d0b3cfeb06a" />
     <Project Path="Scalar.ClientGeneration/Scalar.ClientGeneration.csproj" Id="2e068048-f0fd-4e29-8746-7f39a2becf21" />
   </Folder>
