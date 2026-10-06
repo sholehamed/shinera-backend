@@ -1,4 +1,6 @@
 ﻿using Modules.System.Identity.Application.Features.Tenants.Commands;
+using Modules.System.Identity.Application.Authorization;
+using Web.SharedKernel.Authorization;
 using Modules.System.Identity.Application.Features.Tenants.Queries;
 
 
@@ -9,15 +11,13 @@ public class Tenants : EndpointGroupBase
     public override void Map(WebApplication app)
     {
         app.MapGroup(this)
-
-            .MapPost(TenantPagedList, "pagedList")
-            .MapGet(TenantResolveBySlug, "resolve", configure: x => x.AllowAnonymous())
-            .MapGet(TenantGetById, "{id}")
-            .MapPost(TenantCreate)
-            .MapPut(TenantUpdate, "{id}")
-            .MapDelete(TenantDelete, "{id}")
-            .MapPatch(TenantChangeState, "{id}")
-        ;
+            .MapPost(TenantPagedList, "pagedList", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Tenants.Resource, SystemPermissionCatalog.Tenants.List))
+            .MapGet(TenantResolveBySlug, "resolve", configure: endpoint => endpoint.AllowAnonymous())
+            .MapGet(TenantGetById, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Tenants.Resource, SystemPermissionCatalog.Tenants.List))
+            .MapPost(TenantCreate, configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Tenants.Resource, SystemPermissionCatalog.Tenants.Create))
+            .MapPut(TenantUpdate, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Tenants.Resource, SystemPermissionCatalog.Tenants.Update))
+            .MapDelete(TenantDelete, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Tenants.Resource, SystemPermissionCatalog.Tenants.Delete))
+            .MapPatch(TenantChangeState, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Tenants.Resource, SystemPermissionCatalog.Tenants.Update));
     }
     public async Task<Results<Ok<TenantResloveBySlugDto>, NotFound>> TenantResolveBySlug(IDispatcher sender,HttpContext httpContext)
     {

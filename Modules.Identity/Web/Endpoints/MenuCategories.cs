@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Routing;
+using Modules.System.Identity.Application.Authorization;
+using Web.SharedKernel.Authorization;
 using Modules.System.Identity.Application.Features.MenuCategories.Commands;
 using Modules.System.Identity.Application.Features.MenuCategories.Queries;
 
@@ -10,15 +12,13 @@ public class MenuCategories : EndpointGroupBase
     public override void Map(WebApplication app)
     {
         app.MapGroup(this)
-
-            .MapGet(MenuCategoryGetList, "list")
-            .MapGet(MenuCategoryGetById, "{id}")
-            .MapPost(MenuCategoryGetPagedList, "pagedList")
-            .MapPost(MenuCategoryCreate)
-            .MapPut(MenuCategoryUpdate)
-            .MapGet(MenuCategoryGetMenus,"{categoryId}/menus")
-            .MapDelete(MenuCategoryDelete, "{id}")
-        ;
+            .MapGet(MenuCategoryGetList, "list", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.List))
+            .MapGet(MenuCategoryGetById, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.List))
+            .MapPost(MenuCategoryGetPagedList, "pagedList", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.List))
+            .MapPost(MenuCategoryCreate, configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.Create))
+            .MapPut(MenuCategoryUpdate, configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.Update))
+            .MapGet(MenuCategoryGetMenus, "{categoryId}/menus", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.List))
+            .MapDelete(MenuCategoryDelete, "{id}", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Menus.Resource, SystemPermissionCatalog.Menus.Delete));
     }
     public async Task<Results<Ok<List<MenuCategoryGetMenusDto>>, BadRequest>> MenuCategoryGetMenus(IDispatcher sender,Guid categoryId,string? text)
     {

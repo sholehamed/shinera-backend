@@ -44,12 +44,44 @@ namespace Modules.System.Identity.Application.Features.Permissions.Commands
 
                 RuleFor(x => x.ResourceId)
                     .NotEmpty();
+
+                RuleFor(x => x.Code)
+                    .Matches(@"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$")
+                    .WithMessage("Permission key must use resource.action format.");
+
+                RuleFor(x => x)
+                    .MustAsync(async (command, cancellationToken) =>
+                    {
+                        var resourceCode = await _context.Resources
+                            .AsNoTracking()
+                            .Where(resource =>
+                                resource.Id == command.ResourceId &&
+                                resource.IsActive)
+                            .Select(resource => resource.Code)
+                            .SingleOrDefaultAsync(cancellationToken);
+
+                        if (string.IsNullOrWhiteSpace(resourceCode))
+                            return false;
+
+                        var normalized = command.Code
+                            .Trim()
+                            .ToLowerInvariant();
+
+                        return normalized.StartsWith(
+                            $"{resourceCode.Trim().ToLowerInvariant()}.",
+                            StringComparison.Ordinal);
+                    })
+                    .WithMessage("Permission resource must match its permission key.");
             }
             private async Task<bool> BeUniqueCode(PermissionUpdateCommand command, string code, CancellationToken cancellationToken)
             {
                 // بررسی اینکه آیا کدی مشابه با شناسه متفاوت وجود دارد یا خیر
+                var normalizedCode = code.Trim().ToLowerInvariant();
+
                 return !await _context.Permissions
-                    .AnyAsync(x => x.Code == code && x.Id != command.Id, cancellationToken);
+                    .AnyAsync(
+                        x => x.Code == normalizedCode && x.Id != command.Id,
+                        cancellationToken);
             }
         }
         public class PermissionUpdateCommandHandler : ICommandHandler<PermissionUpdateCommand>
@@ -83,6 +115,7 @@ namespace Modules.System.Identity.Application.Features.Permissions.Commands
                 Guard.Against.NotFound(command.Id, entity);
 
                 _mapper.Map(command, entity);
+                entity.SetKey(command.Code);
 
                 var newApiResourceIds = apiResources.Distinct().ToHashSet();
                 var currentApiResourceIds = entity.ApiResources.Select(x => x.ApiResourceId).ToHashSet();

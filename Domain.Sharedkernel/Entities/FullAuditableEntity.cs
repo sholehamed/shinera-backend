@@ -1,31 +1,39 @@
-﻿using Domain.SharedKernel.Common;
+using Domain.SharedKernel.Common;
 
-namespace Domain.SharedKernel.Entities
+namespace Domain.SharedKernel.Entities;
+
+public interface IFullAuditableEntity : IAuditableEntity, ISoftDelete
 {
-    public interface IFullAuditableEntity:IAuditableEntity, ISoftDelete
-    {
+}
 
+public abstract class FullAuditableEntity : AuditableEntity, IFullAuditableEntity
+{
+    public bool IsDeleted { get; set; }
+    public Guid? DeletedBy { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
+    public string? DeletedByIp { get; set; }
+
+    protected FullAuditableEntity()
+    {
     }
-    public abstract class FullAuditableEntity : AuditableEntity, IAuditable, ISoftDelete, IFullAuditableEntity
+
+    protected FullAuditableEntity(ushort code) : base(code)
     {
-        public bool IsDeleted { get; set; }
-        public Guid? DeletedBy { get; set; }
-        public DateTime? DeletedAt { get; set; }
-        public string? DeletedByIp { get; set; }
-        protected FullAuditableEntity()
-        {
+    }
 
-        }
-        protected FullAuditableEntity(ushort code) : base(code) { }
-        protected FullAuditableEntity(ulong id, ushort code) : base(id, code) { }
-        protected FullAuditableEntity(Guid id) : base(id) { }
+    protected FullAuditableEntity(ulong id, ushort code) : base(id, code)
+    {
+    }
 
-        public void Delete(Guid userId, string ip)
-        {
-            IsDeleted = true;
-            DeletedAt = DateTime.Now;
-            DeletedBy = userId;
-            DeletedByIp = ip;
-        }
+    protected FullAuditableEntity(Guid id) : base(id)
+    {
+    }
+
+    public void Delete(Guid userId, string? ip, DateTimeOffset timestamp)
+    {
+        IsDeleted = true;
+        DeletedAt = timestamp.ToUniversalTime();
+        DeletedBy = userId;
+        DeletedByIp = ip;
     }
 }

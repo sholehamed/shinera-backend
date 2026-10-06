@@ -28,22 +28,7 @@ namespace Modules.System.Identity.Web.Util
                 return Guid.TryParse(id, out var guid) ? guid : Guid.Empty;
             }
         }
-
-        public Guid HomeTenantId
-        {
-            get
-            {
-                // فرض می‌کنیم در کلیم‌ها با نام "tenant_id" یا مشابه ذخیره شده است
-                var tenantId = _httpContextAccessor.HttpContext?.User?.FindFirstValue("home_tenant_id");
-
-                if (string.IsNullOrEmpty(tenantId))
-                    return Guid.Empty;
-
-                return Guid.TryParse(tenantId, out var guid) ? guid : Guid.Empty;
-            }
-        }
-
-        public string? UserName => _httpContextAccessor.HttpContext?.User?.Identity?.Name;
+public string? UserName => _httpContextAccessor.HttpContext?.User?.Identity?.Name;
 
         // استخراج User Agent از هدرهای HTTP
         public string? UserAgent => _httpContextAccessor!.HttpContext?.Request?.Headers["User-Agent"].ToString();

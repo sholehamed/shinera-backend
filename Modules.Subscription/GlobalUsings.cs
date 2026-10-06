@@ -1,0 +1,16 @@
+global using Application.SharedKernel.Abstractions;
+global using Application.SharedKernel.Abstractions.Messaging;
+global using Domain.SharedKernel.Common;
+global using Domain.SharedKernel.Entities;
+global using Infrastructure.SharedKernel;
+global using Infrastructure.SharedKernel.Persistence.Configurations;
+global using Infrastructure.SharedKernel.Persistence.Contexts;
+global using Microsoft.AspNetCore.Authorization;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.EntityFrameworkCore.Metadata.Builders;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Web.SharedKernel.Util;
+global using Microsoft.AspNetCore.Builder;
+global using Microsoft.AspNetCore.Http;
+global using Microsoft.AspNetCore.Routing;

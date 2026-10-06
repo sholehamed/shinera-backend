@@ -23,9 +23,54 @@ namespace Modules.System.Identity.Application.Features.Permissions.Commands
     }
     public class PermissionCreateValidator : AbstractValidator<PermissionCreateCommand>
     {
-        public PermissionCreateValidator()
+        public PermissionCreateValidator(IIdentityDbContext context)
         {
+            RuleFor(x => x.Code)
+                .NotEmpty()
+                .MaximumLength(150)
+                .Matches(@"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$")
+                .WithMessage("Permission key must use resource.action format.")
+                .MustAsync(async (code, cancellationToken) =>
+                {
+                    var normalized = code.Trim().ToLowerInvariant();
 
+                    return !await context.Permissions
+                        .AnyAsync(
+                            permission => permission.Code == normalized,
+                            cancellationToken);
+                })
+                .WithMessage("Permission key is already in use.");
+
+            RuleFor(x => x.ResourceId)
+                .NotEmpty();
+
+            RuleFor(x => x)
+                .MustAsync(async (command, cancellationToken) =>
+                {
+                    var resourceCode = await context.Resources
+                        .AsNoTracking()
+                        .Where(resource =>
+                            resource.Id == command.ResourceId &&
+                            resource.IsActive)
+                        .Select(resource => resource.Code)
+                        .SingleOrDefaultAsync(cancellationToken);
+
+                    if (string.IsNullOrWhiteSpace(resourceCode))
+                        return false;
+
+                    var normalized = command.Code
+                        .Trim()
+                        .ToLowerInvariant();
+
+                    return normalized.StartsWith(
+                        $"{resourceCode.Trim().ToLowerInvariant()}.",
+                        StringComparison.Ordinal);
+                })
+                .WithMessage("Permission resource must match its permission key.");
+
+            RuleFor(x => x.Name)
+                .NotEmpty()
+                .MaximumLength(200);
         }
     }
     public class PermissionCreateHandler : ICommandHandler<PermissionCreateCommand, Guid>
@@ -43,6 +88,7 @@ namespace Modules.System.Identity.Application.Features.Permissions.Commands
         {
 
             Permission entity = _mapper.Map<Permission>(command);
+            entity.SetKey(command.Code);
             await _context.Permissions.AddAsync(entity);
             await _context.SaveChangesAsync(cancellationToken);
             return entity.Id;

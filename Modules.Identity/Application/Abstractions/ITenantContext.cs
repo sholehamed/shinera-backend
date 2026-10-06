@@ -1,20 +1,22 @@
-﻿namespace Modules.System.Identity.Application.Abstractions
+namespace Modules.System.Identity.Application.Abstractions;
+
+public interface ITenantContext
 {
-    public interface ITenantContext
-    {
-        Guid? UserId { get; }
-        Guid? HomeTenantId { get; }              // تننت خود کاربر
-        Guid? ActiveTenantId { get; }             // تننت انتخاب‌شده در UI
-        bool IsSuperAdmin { get; }
+    Guid? UserId { get; }
+    Guid? ActiveTenantId { get; }
+    bool IsSuperAdmin { get; }
 
-        IReadOnlyCollection<Guid> ReadableTenantIds { get; }
-        IReadOnlyCollection<Guid> WritableTenantIds { get; }
+    IReadOnlyCollection<Guid> ReadableTenantIds { get; }
+    IReadOnlyCollection<Guid> WritableTenantIds { get; }
 
-        bool IsFilterDisabled { get; }
-        Guid[] ReadScope { get; }
+    bool IsFilterDisabled { get; }
 
-        IDisposable DisableFilter();               // فقط برای Worker و Job سیستمی
-        void Initialize(Guid userId, Guid homeTenantId, bool isSuperAdmin, Guid[] readable, Guid[] writable, Guid? activeTenantId);
-    }
+    IDisposable DisableFilter();
 
+    void Initialize(
+        Guid userId,
+        bool isSuperAdmin,
+        Guid[] readable,
+        Guid[] writable,
+        Guid? activeTenantId);
 }

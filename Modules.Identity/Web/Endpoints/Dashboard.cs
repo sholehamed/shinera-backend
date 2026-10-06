@@ -1,4 +1,6 @@
 ﻿using Modules.System.Identity.Application.Features.Dashboard;
+using Modules.System.Identity.Application.Authorization;
+using Web.SharedKernel.Authorization;
 
 namespace Modules.System.Identity.Web.Endpoints
 {
@@ -7,10 +9,7 @@ namespace Modules.System.Identity.Web.Endpoints
         public override void Map(WebApplication app)
         {
             app.MapGroup(this)
-
-                .MapGet(GetSuperDashboard, "super-dashboard")
-
-            ;
+                .MapGet(GetSuperDashboard, "super-dashboard", configure: endpoint => endpoint.RequirePermission(SystemPermissionCatalog.Dashboard.Resource, SystemPermissionCatalog.Dashboard.View));
         }
 
         public async Task<Ok<SuperDashboardDto>> GetSuperDashboard(IDispatcher sender, CancellationToken cancellationToken)

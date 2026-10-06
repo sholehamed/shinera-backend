@@ -9,10 +9,7 @@ namespace Application.SharedKernel.Abstractions
         bool IsAuthenticated { get; }
 
         Guid UserId { get; }
-
-        Guid HomeTenantId { get; }
-
-        string? UserName { get; }
+string? UserName { get; }
 
         IEnumerable<Claim> GetClaims();
     }

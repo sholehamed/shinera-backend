@@ -1,9 +1,9 @@
-﻿using Application.SharedKernel.Abstractions;
+using Application.SharedKernel.Abstractions;
 
-namespace Application.SharedKernel.Services
+namespace Application.SharedKernel.Services;
+
+[Obsolete("Inject System.TimeProvider directly in new code.")]
+public sealed class DateTimeProvider(System.TimeProvider timeProvider) : IDateTimeProvider
 {
-    public sealed class DateTimeProvider : IDateTimeProvider
-    {
-        public DateTime UtcNow => DateTime.UtcNow;
-    }
+    public DateTime UtcNow => timeProvider.GetUtcNow().UtcDateTime;
 }

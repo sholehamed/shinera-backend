@@ -1,4 +1,5 @@
 ﻿using Modules.System.Identity.Application.Abstractions;
+using Modules.System.Identity.Domain.Entities;
 
 namespace Modules.System.Identity.Application.Features.Roles.Queries
 {
@@ -10,7 +11,13 @@ namespace Modules.System.Identity.Application.Features.Roles.Queries
     {
         public List<ModulePermissionTreeDto> Modules { get; set; } = new();
         public List<Guid> SelectedPermissionIds { get; set; } = new();
+        public List<RolePermissionAssignmentDto> SelectedAssignments { get; set; } = new();
     }
+
+    public sealed record RolePermissionAssignmentDto(
+        Guid PermissionId,
+        string Scope,
+        Guid? ScopeReferenceId);
 
     public sealed class ModulePermissionTreeDto
     {
@@ -57,11 +64,22 @@ namespace Modules.System.Identity.Application.Features.Roles.Queries
 
        public async Task<RolePermissionTreeResponseDto> Handle(RolePermissionsTreeQuery request, CancellationToken cancellationToken)
         {
-            var selectedPermissionIds = await _context.RolePermissions
-             .AsNoTracking()
-             .Where(x => x.RoleId == request.RoleId)
-             .Select(x => x.PermissionId)
-             .ToListAsync(cancellationToken);
+            var selectedAssignments = await _context.PermissionAssignments
+                .AsNoTracking()
+                .Where(x =>
+                    x.SubjectType == PermissionSubjectType.Role &&
+                    x.SubjectId == request.RoleId &&
+                    x.IsActive)
+                .Select(x => new RolePermissionAssignmentDto(
+                    x.PermissionId,
+                    x.ScopeType.ToString(),
+                    x.ScopeReferenceId))
+                .ToListAsync(cancellationToken);
+
+            var selectedPermissionIds = selectedAssignments
+                .Select(x => x.PermissionId)
+                .Distinct()
+                .ToList();
 
             var modules = await _context.Modules
                 .AsNoTracking()
@@ -112,7 +130,8 @@ namespace Modules.System.Identity.Application.Features.Roles.Queries
             return new RolePermissionTreeResponseDto
             {
                 Modules = modules,
-                SelectedPermissionIds = selectedPermissionIds
+                SelectedPermissionIds = selectedPermissionIds,
+                SelectedAssignments = selectedAssignments
             };
         }
     }
