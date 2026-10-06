@@ -1,6 +1,5 @@
 using Application.SharedKernel.Exceptions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Memory;
 using Modules.System.Identity.Application.Abstractions;
 using Modules.System.Identity.Application.Services;
 using Modules.System.Identity.Web.Middlewares;
@@ -24,8 +23,7 @@ public sealed class TenantResolutionMiddlewareTests
         await middleware.InvokeAsync(
             context,
             tenantContext,
-            resolver,
-            new MemoryCache(new MemoryCacheOptions()));
+            resolver);
 
         Assert.Equal(tenantId, tenantContext.ActiveTenantId);
     }
@@ -42,8 +40,7 @@ public sealed class TenantResolutionMiddlewareTests
         await middleware.InvokeAsync(
             context,
             tenantContext,
-            resolver,
-            new MemoryCache(new MemoryCacheOptions()));
+            resolver);
 
         Assert.Null(tenantContext.ActiveTenantId);
     }
@@ -61,8 +58,7 @@ public sealed class TenantResolutionMiddlewareTests
             () => middleware.InvokeAsync(
                 context,
                 new TenantContext(),
-                new StubResolver([allowedTenant]),
-                new MemoryCache(new MemoryCacheOptions())));
+                new StubResolver([allowedTenant])));
 
         Assert.Equal("tenant.access_denied", exception.Code);
     }
@@ -80,8 +76,7 @@ public sealed class TenantResolutionMiddlewareTests
         await middleware.InvokeAsync(
             context,
             tenantContext,
-            new StubResolver([Guid.NewGuid(), selectedTenant]),
-            new MemoryCache(new MemoryCacheOptions()));
+            new StubResolver([Guid.NewGuid(), selectedTenant]));
 
         Assert.Equal(selectedTenant, tenantContext.ActiveTenantId);
     }

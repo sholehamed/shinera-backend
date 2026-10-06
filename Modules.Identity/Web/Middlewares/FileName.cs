@@ -1,5 +1,4 @@
 using Application.SharedKernel.Exceptions;
-using Microsoft.Extensions.Caching.Memory;
 using Modules.System.Identity.Application.Abstractions;
 using OpenIddict.Abstractions;
 using System.Security.Claims;
@@ -11,8 +10,7 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next)
     public async Task InvokeAsync(
         HttpContext httpContext,
         ITenantContext tenantContext,
-        ITenantAccessResolver resolver,
-        IMemoryCache cache)
+        ITenantAccessResolver resolver)
     {
         var principal = httpContext.User;
 
@@ -30,20 +28,9 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next)
                 "The authenticated user context is invalid.");
         }
 
-        var version = await cache.GetOrCreateAsync(
-            $"tenant-access-ver:{userId}",
-            _ => Task.FromResult(0L));
-
-        var scope = await cache.GetOrCreateAsync(
-            $"tenant-access:{userId}:{version}",
-            async entry =>
-            {
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-
-                return await resolver.ResolveAsync(
-                    userId,
-                    httpContext.RequestAborted);
-            });
+        var scope = await resolver.ResolveAsync(
+            userId,
+            httpContext.RequestAborted);
 
         Guid? activeTenantId = null;
 
