@@ -118,9 +118,12 @@ public sealed class EntitlementService(
             .Include(subscription => subscription.Plan)
                 .ThenInclude(plan => plan.Features)
                     .ThenInclude(planFeature => planFeature.Feature)
+            .ToListAsync(cancellationToken);
+
+        subscriptions = subscriptions
             .OrderByDescending(subscription =>
                 subscription.StartedAtUtc)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         if (subscriptions.Count == 0)
         {
