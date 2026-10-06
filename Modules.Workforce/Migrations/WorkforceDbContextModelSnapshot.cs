@@ -51,6 +51,61 @@ namespace Modules.System.Workforce.Migrations
                     b.ToTable("Staff");
                 });
 
+            modelBuilder.Entity("Modules.System.Workforce.Domain.Entities.StaffScheduleBreak", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("datetimeoffset");
+                    b.Property<Guid>("CreatedBy").HasColumnType("uniqueidentifier");
+                    b.Property<string>("CreatedByIp").HasMaxLength(45).HasColumnType("nvarchar(45)");
+                    b.Property<TimeOnly>("EndTime").HasColumnType("time");
+                    b.Property<DateTimeOffset?>("LastModifiedAt").HasColumnType("datetimeoffset");
+                    b.Property<Guid?>("LastModifiedBy").HasColumnType("uniqueidentifier");
+                    b.Property<string>("LastModifiedByIp").HasMaxLength(45).HasColumnType("nvarchar(45)");
+                    b.Property<byte[]>("RowVersion").IsConcurrencyToken().IsRequired().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.Property<Guid>("ScheduleDayId").HasColumnType("uniqueidentifier");
+                    b.Property<TimeOnly>("StartTime").HasColumnType("time");
+                    b.Property<Guid>("TenantId").HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+                    b.HasIndex("CreatedAt").IsDescending();
+                    b.HasIndex("ScheduleDayId", "TenantId");
+                    b.HasIndex("TenantId", "ScheduleDayId", "StartTime", "EndTime").IsUnique();
+                    b.ToTable("StaffScheduleBreaks", t =>
+                        {
+                            t.HasCheckConstraint("CK_StaffScheduleBreaks_TimeRange", "[StartTime] < [EndTime]");
+                        });
+                });
+
+            modelBuilder.Entity("Modules.System.Workforce.Domain.Entities.StaffWeeklyScheduleDay", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("datetimeoffset");
+                    b.Property<Guid>("CreatedBy").HasColumnType("uniqueidentifier");
+                    b.Property<string>("CreatedByIp").HasMaxLength(45).HasColumnType("nvarchar(45)");
+                    b.Property<int>("DayOfWeek").HasColumnType("int");
+                    b.Property<TimeOnly?>("EndTime").HasColumnType("time");
+                    b.Property<bool>("IsDayOff").HasColumnType("bit");
+                    b.Property<DateTimeOffset?>("LastModifiedAt").HasColumnType("datetimeoffset");
+                    b.Property<Guid?>("LastModifiedBy").HasColumnType("uniqueidentifier");
+                    b.Property<string>("LastModifiedByIp").HasMaxLength(45).HasColumnType("nvarchar(45)");
+                    b.Property<byte[]>("RowVersion").IsConcurrencyToken().IsRequired().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.Property<Guid>("StaffId").HasColumnType("uniqueidentifier");
+                    b.Property<TimeOnly?>("StartTime").HasColumnType("time");
+                    b.Property<Guid>("TenantId").HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+                    b.HasAlternateKey("Id", "TenantId");
+                    b.HasIndex("CreatedAt").IsDescending();
+                    b.HasIndex("StaffId", "TenantId");
+                    b.HasIndex("TenantId", "StaffId", "DayOfWeek").IsUnique();
+                    b.ToTable("StaffWeeklyScheduleDays", t =>
+                        {
+                            t.HasCheckConstraint(
+                                "CK_StaffWeeklyScheduleDays_WorkingHours",
+                                "([IsDayOff] = 1 AND [StartTime] IS NULL AND [EndTime] IS NULL) OR ([IsDayOff] = 0 AND [StartTime] IS NOT NULL AND [EndTime] IS NOT NULL AND [StartTime] < [EndTime])");
+                        });
+                });
+
             modelBuilder.Entity("Modules.System.Workforce.Domain.Entities.StaffBranch", b =>
                 {
                     b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
@@ -117,10 +172,38 @@ namespace Modules.System.Workforce.Migrations
                     b.Navigation("Staff");
                 });
 
+            modelBuilder.Entity("Modules.System.Workforce.Domain.Entities.StaffScheduleBreak", b =>
+                {
+                    b.HasOne("Modules.System.Workforce.Domain.Entities.StaffWeeklyScheduleDay", "ScheduleDay")
+                        .WithMany("Breaks")
+                        .HasForeignKey("ScheduleDayId", "TenantId")
+                        .HasPrincipalKey("Id", "TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                    b.Navigation("ScheduleDay");
+                });
+
+            modelBuilder.Entity("Modules.System.Workforce.Domain.Entities.StaffWeeklyScheduleDay", b =>
+                {
+                    b.HasOne("Modules.System.Workforce.Domain.Entities.Staff", "Staff")
+                        .WithMany("WeeklySchedule")
+                        .HasForeignKey("StaffId", "TenantId")
+                        .HasPrincipalKey("Id", "TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                    b.Navigation("Staff");
+                });
+
             modelBuilder.Entity("Modules.System.Workforce.Domain.Entities.Staff", b =>
                 {
                     b.Navigation("Branches");
                     b.Navigation("Services");
+                    b.Navigation("WeeklySchedule");
+                });
+
+            modelBuilder.Entity("Modules.System.Workforce.Domain.Entities.StaffWeeklyScheduleDay", b =>
+                {
+                    b.Navigation("Breaks");
                 });
 #pragma warning restore 612, 618
         }
