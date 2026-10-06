@@ -333,7 +333,8 @@ public sealed class UpdateStaffCommandValidator
 public sealed class UpdateStaffCommandHandler(
     IWorkforceDbContext db,
     ICurrentTenant currentTenant,
-    IPermissionAuthorizationService authorizationService)
+    IPermissionAuthorizationService authorizationService,
+    IStaffBookingConcurrencyGuard concurrencyGuard)
     : ICommandHandler<UpdateStaffCommand>
 {
     public async Task Handle(
@@ -345,6 +346,23 @@ public sealed class UpdateStaffCommandHandler(
             currentTenant,
             SystemPermissionCatalog.Staff.Update,
             cancellationToken);
+
+        var tenantId = currentTenant.TenantId
+            ?? throw new TenantAccessException(
+                "tenant.context_missing",
+                "A tenant context is required for workforce operations.");
+
+        await using var transaction =
+            await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var staffLocked = await concurrencyGuard.TryAcquireAsync(
+            db.Database,
+            tenantId,
+            command.Id,
+            cancellationToken);
+
+        if (!staffLocked)
+            throw new KeyNotFoundException("Staff not found.");
 
         var staff = await db.Staff
             .SingleOrDefaultAsync(
@@ -361,6 +379,7 @@ public sealed class UpdateStaffCommandHandler(
             command.IsActive);
 
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 }
 
@@ -372,7 +391,8 @@ public sealed record SetStaffActiveCommand(
 public sealed class SetStaffActiveCommandHandler(
     IWorkforceDbContext db,
     ICurrentTenant currentTenant,
-    IPermissionAuthorizationService authorizationService)
+    IPermissionAuthorizationService authorizationService,
+    IStaffBookingConcurrencyGuard concurrencyGuard)
     : ICommandHandler<SetStaffActiveCommand>
 {
     public async Task Handle(
@@ -385,6 +405,23 @@ public sealed class SetStaffActiveCommandHandler(
             SystemPermissionCatalog.Staff.Update,
             cancellationToken);
 
+        var tenantId = currentTenant.TenantId
+            ?? throw new TenantAccessException(
+                "tenant.context_missing",
+                "A tenant context is required for workforce operations.");
+
+        await using var transaction =
+            await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var staffLocked = await concurrencyGuard.TryAcquireAsync(
+            db.Database,
+            tenantId,
+            command.Id,
+            cancellationToken);
+
+        if (!staffLocked)
+            throw new KeyNotFoundException("Staff not found.");
+
         var staff = await db.Staff
             .SingleOrDefaultAsync(
                 x => x.Id == command.Id,
@@ -394,6 +431,7 @@ public sealed class SetStaffActiveCommandHandler(
 
         staff.SetActive(command.IsActive);
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 }
 
@@ -417,7 +455,8 @@ public sealed class ReplaceStaffBranchesCommandHandler(
     IWorkforceDbContext db,
     IIdentityDbContext identityDb,
     ICurrentTenant currentTenant,
-    IPermissionAuthorizationService authorizationService)
+    IPermissionAuthorizationService authorizationService,
+    IStaffBookingConcurrencyGuard concurrencyGuard)
     : ICommandHandler<ReplaceStaffBranchesCommand, Result>
 {
     public async Task<Result> Handle(
@@ -434,13 +473,6 @@ public sealed class ReplaceStaffBranchesCommandHandler(
             ?? throw new TenantAccessException(
                 "tenant.context_missing",
                 "A tenant context is required for workforce operations.");
-
-        var staff = await db.Staff
-            .SingleOrDefaultAsync(
-                x => x.Id == command.StaffId,
-                cancellationToken);
-
-        Guard.Against.NotFound(command.StaffId, staff);
 
         var requested = command.BranchIds
             .Where(x => x != Guid.Empty)
@@ -460,6 +492,23 @@ public sealed class ReplaceStaffBranchesCommandHandler(
                     "staff.branch_invalid",
                     "One or more selected branches are not valid for the current tenant."));
         }
+
+        await using var transaction =
+            await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var staffLocked = await concurrencyGuard.TryAcquireAsync(
+            db.Database,
+            tenantId,
+            command.StaffId,
+            cancellationToken);
+
+        if (!staffLocked)
+            throw new KeyNotFoundException("Staff not found.");
+
+        var staff = await db.Staff
+            .SingleAsync(
+                x => x.Id == command.StaffId,
+                cancellationToken);
 
         var existing = await db.StaffBranches
             .Where(x => x.StaffId == command.StaffId)
@@ -484,6 +533,7 @@ public sealed class ReplaceStaffBranchesCommandHandler(
                         branchId)));
 
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Result.Success();
     }
@@ -509,7 +559,8 @@ public sealed class ReplaceStaffServicesCommandHandler(
     IWorkforceDbContext db,
     IServiceCatalogDbContext servicesDb,
     ICurrentTenant currentTenant,
-    IPermissionAuthorizationService authorizationService)
+    IPermissionAuthorizationService authorizationService,
+    IStaffBookingConcurrencyGuard concurrencyGuard)
     : ICommandHandler<ReplaceStaffServicesCommand, Result>
 {
     public async Task<Result> Handle(
@@ -526,13 +577,6 @@ public sealed class ReplaceStaffServicesCommandHandler(
             ?? throw new TenantAccessException(
                 "tenant.context_missing",
                 "A tenant context is required for workforce operations.");
-
-        var staff = await db.Staff
-            .SingleOrDefaultAsync(
-                x => x.Id == command.StaffId,
-                cancellationToken);
-
-        Guard.Against.NotFound(command.StaffId, staff);
 
         var requested = command.ServiceIds
             .Where(x => x != Guid.Empty)
@@ -552,6 +596,23 @@ public sealed class ReplaceStaffServicesCommandHandler(
                     "staff.service_invalid",
                     "One or more selected services are not valid for the current tenant."));
         }
+
+        await using var transaction =
+            await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var staffLocked = await concurrencyGuard.TryAcquireAsync(
+            db.Database,
+            tenantId,
+            command.StaffId,
+            cancellationToken);
+
+        if (!staffLocked)
+            throw new KeyNotFoundException("Staff not found.");
+
+        var staff = await db.Staff
+            .SingleAsync(
+                x => x.Id == command.StaffId,
+                cancellationToken);
 
         var existing = await db.StaffServices
             .Where(x => x.StaffId == command.StaffId)
@@ -576,6 +637,7 @@ public sealed class ReplaceStaffServicesCommandHandler(
                         serviceId)));
 
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Result.Success();
     }
