@@ -17,6 +17,10 @@ internal sealed class AppointmentConfiguration
                     "[StartTime] < [EndTime]");
 
                 table.HasCheckConstraint(
+                    "CK_Appointments_UtcTimeRange",
+                    "[StartUtc] < [EndUtc]");
+
+                table.HasCheckConstraint(
                     "CK_Appointments_Price",
                     "[Price] >= 0");
 
@@ -35,6 +39,18 @@ internal sealed class AppointmentConfiguration
 
         builder.Property(x => x.EndTime)
             .HasColumnType("time")
+            .IsRequired();
+
+        builder.Property(x => x.StartUtc)
+            .HasColumnType("datetimeoffset")
+            .IsRequired();
+
+        builder.Property(x => x.EndUtc)
+            .HasColumnType("datetimeoffset")
+            .IsRequired();
+
+        builder.Property(x => x.TimeZoneId)
+            .HasMaxLength(128)
             .IsRequired();
 
         builder.Property(x => x.Price)
@@ -73,11 +89,11 @@ internal sealed class AppointmentConfiguration
             x.TenantId,
             x.StaffId,
             x.Date,
-            x.StartTime,
-            x.EndTime
+            x.StartUtc,
+            x.EndUtc
         })
         .HasDatabaseName(
-            "IX_Appointments_Tenant_Staff_Date_Time");
+            "IX_Appointments_Tenant_Staff_Date_UtcTime");
 
         base.Configure(builder);
     }
