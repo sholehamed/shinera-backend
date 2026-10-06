@@ -129,10 +129,10 @@ public sealed class AppointmentAvailabilityService(
 
         var blockingAppointments = await appointmentsDb.Appointments
             .AsNoTracking()
+            .Where(AppointmentBookingRules.BlockingPredicate)
             .Where(x =>
                 eligibleStaffIds.Contains(x.StaffId) &&
-                x.Date == date &&
-                AppointmentBookingRules.BlockingStatuses.Contains(x.Status))
+                x.Date == date)
             .Select(x => new BusyRange(
                 x.StaffId,
                 x.StartUtc,
