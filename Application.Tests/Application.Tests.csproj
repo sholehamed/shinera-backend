@@ -25,6 +25,7 @@
     <ProjectReference Include="..\Modules.Subscription\Modules.Subscription.csproj" />
     <ProjectReference Include="..\Modules.Services\Modules.Services.csproj" />
     <ProjectReference Include="..\Modules.Workforce\Modules.Workforce.csproj" />
+    <ProjectReference Include="..\Modules.Crm\Modules.Crm.csproj" />
   </ItemGroup>
 
 </Project>
