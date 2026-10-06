@@ -202,9 +202,6 @@ public static class DependencyInjections
 
         services.AddScoped<SystemPermissionCatalogSeedContributor>();
         services.AddScoped<OpenIddictWebClientSeedContributor>();
-        services.AddScoped<ISeedContributor>(
-            provider => provider.GetRequiredService<OpenIddictWebClientSeedContributor>());
-        services.AddScoped<ISeedContributor, DefaultIdentitySeedContributor>();
         services.AddAuthorization();
 
         return services;
