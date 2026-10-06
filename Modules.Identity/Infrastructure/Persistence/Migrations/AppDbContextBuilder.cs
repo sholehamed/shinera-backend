@@ -1,22 +1,28 @@
-﻿using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.EntityFrameworkCore.Design;
+using Modules.System.Identity.Application.Services;
 using Modules.System.Identity.Infrastructure.Persistence.Contexts;
 
-namespace Modules.System.Identity.Infrastructure.Persistence.Migrations
+namespace Modules.System.Identity.Infrastructure.Persistence.Migrations;
+
+internal sealed class AppDbContextBuilder
+    : IDesignTimeDbContextFactory<IdentityDbContext>
 {
-    internal class AppDbContextBuilder : IDesignTimeDbContextFactory<IdentityDbContext>
+    public IdentityDbContext CreateDbContext(string[] args)
     {
-        public IdentityDbContext CreateDbContext(string[] args)
-        {
-            var DBNAME = "MyHshkDb";
+        const string connectionString =
+            "Server=localhost;Database=Shinera.DesignTime;User Id=sa;Password=DesignTimeOnly!123;TrustServerCertificate=True";
 
-            var SqlConnectionString =
-                $"Server={Environment.GetEnvironmentVariable("DataBaseServer")};Database={DBNAME};User Id={Environment.GetEnvironmentVariable("DataBaseUsername")};password={Environment.GetEnvironmentVariable("DataBasePassword")};MultipleActiveResultSets=true;TrustServerCertificate=True";
+        var options = new DbContextOptionsBuilder<IdentityDbContext>();
 
-            var opt =new DbContextOptionsBuilder<IdentityDbContext>();
-            opt.UseSqlServer(SqlConnectionString, s => s.MigrationsHistoryTable($"__EFMigrationsHistory_Identity")
-                .MigrationsAssembly(typeof(AppDbContextBuilder).Assembly.FullName));
-            var db=new IdentityDbContext(opt.Options,null);
-            return db;
-        }
+        options.UseSqlServer(
+            connectionString,
+            sql => sql
+                .MigrationsHistoryTable("__EFMigrationsHistory_Identity")
+                .MigrationsAssembly(
+                    typeof(AppDbContextBuilder).Assembly.FullName));
+
+        return new IdentityDbContext(
+            options.Options,
+            new TenantContext());
     }
 }
