@@ -24,9 +24,22 @@ namespace Modules.System.Identity.Application.Features.Users.Commands
                 .ForMember(x => x.NormalizedUserName, opt => opt.MapFrom(x => x.Username.ToLower()));
         }
     }
-    public class UserUpdateCommandValidator : AbstractValidator<UserUpdateCommand>
+    public sealed class UserUpdateCommandValidator : AbstractValidator<UserUpdateCommand>
     {
-
+        public UserUpdateCommandValidator(IIdentityDbContext dbContext)
+        {
+            RuleFor(x => x.Email)
+                .NotEmpty()
+                .EmailAddress()
+                .MustAsync(async (command, email, cancellationToken) =>
+                    !await dbContext.Users.AnyAsync(
+                        user =>
+                            user.Id != command.Id &&
+                            user.NormalizedEmail ==
+                                email.Trim().ToUpperInvariant(),
+                        cancellationToken))
+                .WithMessage("Email is already in use.");
+        }
     }
     public class UserUpdateCommandHandler(IMapper mapper, IIdentityDbContext context, IPasswordHasher<User> passwordHasher) : ICommandHandler<UserUpdateCommand, Guid>
     {
