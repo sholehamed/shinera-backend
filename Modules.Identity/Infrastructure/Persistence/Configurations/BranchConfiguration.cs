@@ -22,6 +22,10 @@ internal sealed class BranchConfiguration
         builder.Property(x => x.Address)
             .HasMaxLength(500);
 
+        builder.Property(x => x.TimeZoneId)
+            .HasMaxLength(128)
+            .IsRequired();
+
         builder.Property(x => x.IsMain)
             .IsRequired();
 
