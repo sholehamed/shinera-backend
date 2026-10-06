@@ -264,6 +264,37 @@ public sealed class StaffScheduleTests
     }
 
     [Fact]
+    public async Task AvailabilityResolver_InactiveStaffHasNoSegments()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var staff = await fixture.AddStaffAsync(
+            isActive: false);
+
+        fixture.Db.StaffWeeklyScheduleDays.Add(
+            new StaffWeeklyScheduleDay(
+                fixture.TenantId,
+                staff.Id,
+                DayOfWeek.Saturday,
+                false,
+                new TimeOnly(9, 0),
+                new TimeOnly(18, 0)));
+
+        await fixture.Db.SaveChangesAsync();
+
+        var service =
+            new StaffScheduleAvailabilityService(
+                fixture.Db);
+
+        var result = await service.ResolveAsync(
+            staff.Id,
+            FindNext(DayOfWeek.Saturday));
+
+        Assert.True(result.IsConfigured);
+        Assert.False(result.IsStaffActive);
+        Assert.Empty(result.AvailableSegments);
+    }
+
+    [Fact]
     public async Task ReplaceSchedule_WithBranchScope_IsDenied()
     {
         await using var fixture = await CreateFixtureAsync();
