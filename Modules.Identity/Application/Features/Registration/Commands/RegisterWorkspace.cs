@@ -9,9 +9,9 @@ namespace Modules.System.Identity.Application.Features.Registration.Commands;
 
 public sealed record RegisterWorkspaceCommand(
     string PlanKey,
-    RegistrationBusiness Business,
-    RegistrationOwner Owner,
-    RegistrationBranch Branch)
+    RegistrationBusiness? Business,
+    RegistrationOwner? Owner,
+    RegistrationBranch? Branch)
     : ICommand<Result<RegistrationResult>>;
 
 public sealed record RegistrationBusiness(
@@ -55,62 +55,82 @@ public sealed class RegisterWorkspaceCommandValidator
             .NotEmpty()
             .MaximumLength(100);
 
-        RuleFor(x => x.Business.Name)
-            .NotEmpty()
-            .MaximumLength(200);
+        RuleFor(x => x.Business)
+            .NotNull();
 
-        RuleFor(x => x.Business.BusinessType)
-            .NotEmpty()
-            .MaximumLength(100);
+        RuleFor(x => x.Owner)
+            .NotNull();
 
-        RuleFor(x => x.Business.Mode)
-            .IsInEnum();
+        RuleFor(x => x.Branch)
+            .NotNull();
 
-        RuleFor(x => x.Business.Phone)
-            .MaximumLength(32);
+        When(x => x.Business is not null, () =>
+        {
+            RuleFor(x => x.Business!.Name)
+                .NotEmpty()
+                .MaximumLength(200);
 
-        RuleFor(x => x.Business.Email)
-            .EmailAddress()
-            .When(x => !string.IsNullOrWhiteSpace(x.Business.Email))
-            .MaximumLength(256);
+            RuleFor(x => x.Business!.BusinessType)
+                .NotEmpty()
+                .MaximumLength(100);
 
-        RuleFor(x => x.Business.City)
-            .MaximumLength(150);
+            RuleFor(x => x.Business!.Mode)
+                .IsInEnum();
 
-        RuleFor(x => x.Business.Address)
-            .MaximumLength(500);
+            RuleFor(x => x.Business!.Phone)
+                .MaximumLength(32);
 
-        RuleFor(x => x.Owner.FirstName)
-            .NotEmpty()
-            .MaximumLength(100);
+            RuleFor(x => x.Business!.Email)
+                .EmailAddress()
+                .When(x =>
+                    !string.IsNullOrWhiteSpace(
+                        x.Business!.Email))
+                .MaximumLength(256);
 
-        RuleFor(x => x.Owner.LastName)
-            .NotEmpty()
-            .MaximumLength(100);
+            RuleFor(x => x.Business!.City)
+                .MaximumLength(150);
 
-        RuleFor(x => x.Owner.Phone)
-            .NotEmpty()
-            .MaximumLength(32);
+            RuleFor(x => x.Business!.Address)
+                .MaximumLength(500);
+        });
 
-        RuleFor(x => x.Owner.Email)
-            .NotEmpty()
-            .EmailAddress()
-            .MaximumLength(256);
+        When(x => x.Owner is not null, () =>
+        {
+            RuleFor(x => x.Owner!.FirstName)
+                .NotEmpty()
+                .MaximumLength(100);
 
-        RuleFor(x => x.Owner.Password)
-            .NotEmpty()
-            .MinimumLength(8)
-            .MaximumLength(200);
+            RuleFor(x => x.Owner!.LastName)
+                .NotEmpty()
+                .MaximumLength(100);
 
-        RuleFor(x => x.Branch.Name)
-            .NotEmpty()
-            .MaximumLength(200);
+            RuleFor(x => x.Owner!.Phone)
+                .NotEmpty()
+                .MaximumLength(32);
 
-        RuleFor(x => x.Branch.Phone)
-            .MaximumLength(32);
+            RuleFor(x => x.Owner!.Email)
+                .NotEmpty()
+                .EmailAddress()
+                .MaximumLength(256);
 
-        RuleFor(x => x.Branch.Address)
-            .MaximumLength(500);
+            RuleFor(x => x.Owner!.Password)
+                .NotEmpty()
+                .MinimumLength(8)
+                .MaximumLength(200);
+        });
+
+        When(x => x.Branch is not null, () =>
+        {
+            RuleFor(x => x.Branch!.Name)
+                .NotEmpty()
+                .MaximumLength(200);
+
+            RuleFor(x => x.Branch!.Phone)
+                .MaximumLength(32);
+
+            RuleFor(x => x.Branch!.Address)
+                .MaximumLength(500);
+        });
     }
 }
 
@@ -126,8 +146,12 @@ public sealed class RegisterWorkspaceCommandHandler(
         RegisterWorkspaceCommand command,
         CancellationToken cancellationToken)
     {
+        var business = command.Business!;
+        var owner = command.Owner!;
+        var branchInput = command.Branch!;
+
         var normalizedEmail =
-            command.Owner.Email.Trim().ToUpperInvariant();
+            owner.Email.Trim().ToUpperInvariant();
 
         using (tenantContext.DisableFilter())
         {
@@ -171,7 +195,7 @@ public sealed class RegisterWorkspaceCommandHandler(
 
             var tenant = new Tenant(tenantId)
             {
-                Name = command.Business.Name.Trim(),
+                Name = business.Name.Trim(),
                 Slug = slug,
                 IsActive = true
             };
@@ -179,11 +203,11 @@ public sealed class RegisterWorkspaceCommandHandler(
             var user = new User(
                 userId,
                 $"owner-{userId:N}",
-                command.Owner.Email.Trim(),
-                command.Owner.FirstName.Trim(),
-                command.Owner.LastName.Trim())
+                owner.Email.Trim(),
+                owner.FirstName.Trim(),
+                owner.LastName.Trim())
             {
-                Phone = command.Owner.Phone.Trim(),
+                Phone = owner.Phone.Trim(),
                 SecurityStamp = Guid.NewGuid().ToString("N"),
                 ConcurrencyStamp = Guid.NewGuid().ToString("N"),
                 EmailConfirmed = false
@@ -192,24 +216,24 @@ public sealed class RegisterWorkspaceCommandHandler(
             user.PasswordHash =
                 passwordHasher.HashPassword(
                     user,
-                    command.Owner.Password);
+                    owner.Password);
 
             var mainBranch = new Branch(
                 tenantId,
-                command.Branch.Name.Trim(),
-                Normalize(command.Branch.Phone),
-                Normalize(command.Branch.Address),
+                branchInput.Name.Trim(),
+                Normalize(branchInput.Phone),
+                Normalize(branchInput.Address),
                 isMain: true);
 
             var businessProfile = new BusinessProfile(
                 tenantId,
-                command.Business.Name,
-                command.Business.BusinessType,
-                command.Business.Mode,
-                command.Business.Phone,
-                command.Business.Email,
-                command.Business.City,
-                command.Business.Address);
+                business.Name,
+                business.BusinessType,
+                business.Mode,
+                business.Phone,
+                business.Email,
+                business.City,
+                business.Address);
 
             var ownerRole = new Role(
                 tenantId,
