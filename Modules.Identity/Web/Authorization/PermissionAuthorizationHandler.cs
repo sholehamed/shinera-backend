@@ -49,6 +49,9 @@ public sealed class PermissionAuthorizationHandler(
             PermissionDecisionCode.ScopeDenied =>
                 "authorization.scope_denied",
 
+            PermissionDecisionCode.UserInactive =>
+                "authorization.user_inactive",
+
             _ => "authorization.permission_required"
         };
 }
