@@ -336,6 +336,54 @@ public sealed class CustomerCrmTests
     }
 
     [Fact]
+    public async Task CustomerWithLinkedUser_IsSupported()
+    {
+        await using var fixture = await CreateFixtureAsync();
+
+        var userId = Guid.NewGuid();
+
+        var customer = new Customer(
+            fixture.TenantId,
+            "Linked",
+            "Customer",
+            "09120000006",
+            "09120000006",
+            null,
+            null,
+            null,
+            null,
+            false,
+            userId);
+
+        fixture.Db.Customers.Add(customer);
+        await fixture.Db.SaveChangesAsync();
+
+        var stored = await fixture.Db.Customers
+            .AsNoTracking()
+            .SingleAsync(x => x.Id == customer.Id);
+
+        Assert.Equal(userId, stored.UserId);
+    }
+
+    [Fact]
+    public async Task Validator_RejectsMobileWithoutDigits()
+    {
+        var validator =
+            new CreateCustomerCommandValidator();
+
+        var result = await validator.ValidateAsync(
+            CustomerCommand(
+                "Invalid",
+                "+"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(
+            result.Errors,
+            x => x.PropertyName ==
+                nameof(CreateCustomerCommand.Mobile));
+    }
+
+    [Fact]
     public async Task CustomerCanBeLinkedToUserButLinkIsTenantUnique()
     {
         await using var fixture = await CreateFixtureAsync();
