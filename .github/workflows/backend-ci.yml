@@ -52,5 +52,14 @@ jobs:
             --output /tmp/subscription-migrations.sql
           test -s /tmp/subscription-migrations.sql
 
+      - name: Verify Services migration chain
+        run: |
+          dotnet ef migrations script --idempotent \
+            --project Modules.Services/Modules.Services.csproj \
+            --startup-project Web/Web.csproj \
+            --context ServicesDbContext \
+            --output /tmp/services-migrations.sql
+          test -s /tmp/services-migrations.sql
+
       - name: Test
         run: dotnet test shinera-back.slnx --configuration Release --no-build --verbosity normal

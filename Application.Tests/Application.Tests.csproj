@@ -23,6 +23,7 @@
     <ProjectReference Include="..\Application.Sharedkernel\Application.Sharedkernel.csproj" />
     <ProjectReference Include="..\Modules.Identity\Modules.Identity.csproj" />
     <ProjectReference Include="..\Modules.Subscription\Modules.Subscription.csproj" />
+    <ProjectReference Include="..\Modules.Services\Modules.Services.csproj" />
   </ItemGroup>
 
 </Project>
