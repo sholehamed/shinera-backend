@@ -16,6 +16,15 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Shinera_CI_2026_Strong!"
+        ports:
+          - 1433:1433
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -89,4 +98,6 @@ jobs:
           test -s /tmp/appointments-migrations.sql
 
       - name: Test
+        env:
+          SHINERA_TEST_SQLSERVER: "Server=localhost,1433;Database=shinera_appointment_concurrency;User Id=sa;Password=Shinera_CI_2026_Strong!;TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true"
         run: dotnet test shinera-back.slnx --configuration Release --no-build --verbosity normal
