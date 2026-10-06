@@ -246,7 +246,8 @@ public sealed class SystemPermissionCatalogSeedContributorTests
                         (assignment, permission) =>
                             permission.Code)
                     .CountAsync(code =>
-                        code.StartsWith("services."));
+                        code.StartsWith("services.") ||
+                        code.StartsWith("staff."));
 
             Assert.Equal(
                 0,

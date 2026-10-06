@@ -409,6 +409,7 @@ public sealed class ReplaceStaffBranchesCommandValidator
     {
         RuleFor(x => x.StaffId).NotEmpty();
         RuleFor(x => x.BranchIds).NotNull();
+        RuleForEach(x => x.BranchIds).NotEmpty();
     }
 }
 
@@ -500,6 +501,7 @@ public sealed class ReplaceStaffServicesCommandValidator
     {
         RuleFor(x => x.StaffId).NotEmpty();
         RuleFor(x => x.ServiceIds).NotNull();
+        RuleForEach(x => x.ServiceIds).NotEmpty();
     }
 }
 

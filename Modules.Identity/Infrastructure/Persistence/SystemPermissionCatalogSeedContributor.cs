@@ -374,7 +374,7 @@ public sealed class SystemPermissionCatalogSeedContributor
                     .ToHashSet();
 
                 // A role name is not a trust boundary. Only roles that already
-                // carry the complete pre-Services workspace-owner baseline are
+                // carry the stable workspace-owner bootstrap baseline are
                 // eligible for catalog expansion. This identifies Owners created
                 // by registration without granting privileges to an arbitrary
                 // custom role that happens to be named "Owner".
