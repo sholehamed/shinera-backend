@@ -30,8 +30,6 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next)
                 "The authenticated user context is invalid.");
         }
 
-        var isSuperAdmin = principal.IsInRole("SuperAdmin");
-
         var version = await cache.GetOrCreateAsync(
             $"tenant-access-ver:{userId}",
             _ => Task.FromResult(0L));
@@ -44,7 +42,6 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next)
 
                 return await resolver.ResolveAsync(
                     userId,
-                    isSuperAdmin,
                     httpContext.RequestAborted);
             });
 
@@ -69,7 +66,7 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next)
 
         tenantContext.Initialize(
             userId,
-            isSuperAdmin,
+            false,
             scope.Readable,
             scope.Writable,
             activeTenantId);

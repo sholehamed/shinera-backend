@@ -8,34 +8,21 @@ public sealed class TenantAccessResolver(
 {
     public async Task<(Guid[] Readable, Guid[] Writable)> ResolveAsync(
         Guid userId,
-        bool isSuperAdmin,
         CancellationToken cancellationToken)
     {
-        Guid[] tenantIds;
-
-        if (isSuperAdmin)
-        {
-            tenantIds = await db.Tenants
-                .AsNoTracking()
-                .Where(tenant => tenant.IsActive)
-                .Select(tenant => tenant.Id)
-                .ToArrayAsync(cancellationToken);
-        }
-        else
-        {
-            // Resolving workspace membership happens before an active Tenant exists,
-            // so bypassing only the named Tenant filter is intentional here.
-            tenantIds = await db.TenantMemberships
-                .IgnoreQueryFilters(["tenant"])
-                .AsNoTracking()
-                .Where(membership =>
-                    membership.UserId == userId &&
-                    membership.IsActive &&
-                    membership.Tenant.IsActive)
-                .Select(membership => membership.TenantId)
-                .Distinct()
-                .ToArrayAsync(cancellationToken);
-        }
+        // Ordinary workspace access is membership-based only.
+        // Platform/system administration must use an explicit privileged
+        // system context rather than bypassing membership via token roles.
+        var tenantIds = await db.TenantMemberships
+            .IgnoreQueryFilters(["tenant"])
+            .AsNoTracking()
+            .Where(membership =>
+                membership.UserId == userId &&
+                membership.IsActive &&
+                membership.Tenant.IsActive)
+            .Select(membership => membership.TenantId)
+            .Distinct()
+            .ToArrayAsync(cancellationToken);
 
         Array.Sort(tenantIds);
 

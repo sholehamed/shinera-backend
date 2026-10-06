@@ -103,7 +103,6 @@ public sealed class TenantResolutionMiddlewareTests
     {
         public Task<(Guid[] Readable, Guid[] Writable)> ResolveAsync(
             Guid userId,
-            bool isSuperAdmin,
             CancellationToken cancellationToken)
         {
             return Task.FromResult((tenantIds, tenantIds));

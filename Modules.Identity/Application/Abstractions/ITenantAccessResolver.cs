@@ -4,6 +4,5 @@ public interface ITenantAccessResolver
 {
     Task<(Guid[] Readable, Guid[] Writable)> ResolveAsync(
         Guid userId,
-        bool isSuperAdmin,
         CancellationToken cancellationToken);
 }
