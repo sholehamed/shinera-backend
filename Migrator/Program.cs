@@ -26,10 +26,15 @@ var subscriptionDbContext =
 
 await subscriptionDbContext.Database.MigrateAsync();
 
+var permissionCatalogSeeder =
+    scope.ServiceProvider.GetRequiredService<SystemPermissionCatalogSeedContributor>();
+
+await permissionCatalogSeeder.SeedAsync(scope.ServiceProvider);
+
 var clientSeeder =
     scope.ServiceProvider.GetRequiredService<OpenIddictWebClientSeedContributor>();
 
 await clientSeeder.SeedAsync(scope.ServiceProvider);
 
 Console.WriteLine(
-    "Identity and Subscription migrations applied; Shinera web OpenIddict client synchronized.");
+    "Identity and Subscription migrations applied; system permission catalog and Shinera web OpenIddict client synchronized.");
