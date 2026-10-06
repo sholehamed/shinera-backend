@@ -80,6 +80,7 @@ public sealed class BranchGetByIdQueryHandler(
             tenantContext,
             SystemPermissionCatalog.Branches.List,
             request.Id,
+            requireWriteAccess: false,
             cancellationToken);
 
         var branch = await db.Branches
