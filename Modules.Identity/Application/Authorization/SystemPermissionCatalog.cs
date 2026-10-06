@@ -21,6 +21,13 @@ public static class SystemPermissionCatalog
         public const string SetMain = "set_main";
     }
 
+    public static class BusinessProfile
+    {
+        public const string Resource = "business_profile";
+        public const string View = "view";
+        public const string Update = "update";
+    }
+
     public static class Modules
     {
         public const string Resource = "modules";
@@ -89,6 +96,33 @@ public static class SystemPermissionCatalog
         public const string Resource = "dashboard";
         public const string View = "view";
     }
+
+    public static readonly string[] WorkspaceOwnerPermissionKeys =
+    [
+        Key(Tenants.Resource, Tenants.List),
+        Key(Tenants.Resource, Tenants.Update),
+        Key(Branches.Resource, Branches.List),
+        Key(Branches.Resource, Branches.Create),
+        Key(Branches.Resource, Branches.Update),
+        Key(Branches.Resource, Branches.Disable),
+        Key(Branches.Resource, Branches.SetMain),
+        Key(BusinessProfile.Resource, BusinessProfile.View),
+        Key(BusinessProfile.Resource, BusinessProfile.Update),
+        Key(Users.Resource, Users.List),
+        Key(Users.Resource, Users.Create),
+        Key(Users.Resource, Users.Update),
+        Key(Users.Resource, Users.Delete),
+        Key(Roles.Resource, Roles.List),
+        Key(Roles.Resource, Roles.Create),
+        Key(Roles.Resource, Roles.Update),
+        Key(Roles.Resource, Roles.Delete),
+        Key(Groups.Resource, Groups.List),
+        Key(Groups.Resource, Groups.Create),
+        Key(Groups.Resource, Groups.Update),
+        Key(Groups.Resource, Groups.Delete),
+        Key(Permissions.Resource, Permissions.List),
+        Key(Dashboard.Resource, Dashboard.View)
+    ];
 
     public static string Key(string resource, string action) =>
         $"{resource.Trim().ToLowerInvariant()}.{action.Trim().ToLowerInvariant()}";

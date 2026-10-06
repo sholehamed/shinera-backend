@@ -87,6 +87,22 @@ public static class DependencyInjections
                                 QueueLimit = 0,
                                 AutoReplenishment = true
                             }));
+
+            options.AddPolicy(
+                "shinera-auth-registration",
+                httpContext =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey:
+                            httpContext.Connection.RemoteIpAddress?.ToString()
+                            ?? "unknown",
+                        factory: _ =>
+                            new FixedWindowRateLimiterOptions
+                            {
+                                PermitLimit = 5,
+                                Window = TimeSpan.FromMinutes(10),
+                                QueueLimit = 0,
+                                AutoReplenishment = true
+                            }));
         });
 
         var allowedOrigins = configuration
