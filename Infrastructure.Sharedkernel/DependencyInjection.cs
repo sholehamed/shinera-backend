@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Data;
 
 namespace Infrastructure.SharedKernel
@@ -23,8 +24,15 @@ namespace Infrastructure.SharedKernel
 
 
 
-            services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
-            services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();
+            services.TryAddEnumerable(
+                ServiceDescriptor.Scoped<
+                    ISaveChangesInterceptor,
+                    AuditableEntityInterceptor>());
+
+            services.TryAddEnumerable(
+                ServiceDescriptor.Scoped<
+                    ISaveChangesInterceptor,
+                    DispatchDomainEventsInterceptor>());
             services.AddDbContext<TDbContext>((sp, options) =>
             {
                 options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
