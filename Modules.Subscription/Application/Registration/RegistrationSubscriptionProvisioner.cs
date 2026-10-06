@@ -19,6 +19,12 @@ public sealed class RegistrationSubscriptionProvisioner(
         DbTransaction transaction,
         CancellationToken cancellationToken = default)
     {
+        // Join before the first command executes: the shared connection
+        // already has the Identity registration transaction open.
+        await db.Database.UseTransactionAsync(
+            transaction,
+            cancellationToken);
+
         var normalizedPlanKey = Plan.NormalizeKey(planKey);
 
         var plan = await db.Plans
@@ -49,13 +55,6 @@ public sealed class RegistrationSubscriptionProvisioner(
                     "registration.subscription_exists",
                     "A subscription already exists for this tenant."));
         }
-
-        // Identity and Subscription DbContexts share the same scoped
-        // SqlConnection, so this joins the transaction opened by the
-        // registration orchestrator instead of creating a second transaction.
-        await db.Database.UseTransactionAsync(
-            transaction,
-            cancellationToken);
 
         var subscription = new SubscriptionEntity(
             tenantId,
