@@ -302,7 +302,6 @@ public sealed class ReplaceStaffWeeklyScheduleCommandHandler(
                 requestedDay.EndTime);
 
             SynchronizeBreaks(
-                db,
                 tenantId,
                 existingDay,
                 requestedDay.Breaks ?? []);
@@ -349,44 +348,48 @@ public sealed class ReplaceStaffWeeklyScheduleCommandHandler(
     }
 
     private static void SynchronizeBreaks(
-        IWorkforceDbContext db,
         Guid tenantId,
         StaffWeeklyScheduleDay existingDay,
         IReadOnlyCollection<StaffScheduleBreakInput> requestedBreaks)
     {
-        var requestedSet = requestedBreaks
-            .Select(x => (
-                x.StartTime,
-                x.EndTime))
-            .ToHashSet();
+        var existing = existingDay.Breaks
+            .OrderBy(x => x.StartTime)
+            .ThenBy(x => x.EndTime)
+            .ToList();
 
-        var existingSet = existingDay.Breaks
-            .Select(x => (
-                x.StartTime,
-                x.EndTime))
-            .ToHashSet();
+        var requested = requestedBreaks
+            .OrderBy(x => x.StartTime)
+            .ThenBy(x => x.EndTime)
+            .ToList();
 
-        db.StaffScheduleBreaks.RemoveRange(
-            existingDay.Breaks.Where(x =>
-                !requestedSet.Contains((
-                    x.StartTime,
-                    x.EndTime))));
+        var commonCount = Math.Min(
+            existing.Count,
+            requested.Count);
 
-        foreach (var scheduleBreak in requestedBreaks)
+        for (var index = 0;
+             index < commonCount;
+             index++)
         {
-            if (existingSet.Contains((
-                    scheduleBreak.StartTime,
-                    scheduleBreak.EndTime)))
-            {
-                continue;
-            }
+            existing[index].Configure(
+                requested[index].StartTime,
+                requested[index].EndTime);
+        }
 
+        foreach (var extra in
+                 existing.Skip(commonCount).ToArray())
+        {
+            existingDay.Breaks.Remove(extra);
+        }
+
+        foreach (var extra in
+                 requested.Skip(commonCount))
+        {
             existingDay.Breaks.Add(
                 new StaffScheduleBreak(
                     tenantId,
                     existingDay.Id,
-                    scheduleBreak.StartTime,
-                    scheduleBreak.EndTime));
+                    extra.StartTime,
+                    extra.EndTime));
         }
     }
 }
