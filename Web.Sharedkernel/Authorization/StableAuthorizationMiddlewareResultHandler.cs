@@ -55,6 +55,9 @@ public sealed class StableAuthorizationMiddlewareResultHandler
             "authorization.scope_denied" =>
                 "The requested operation is outside the allowed permission scope.",
 
+            "authorization.user_inactive" =>
+                "The current user account is inactive.",
+
             "subscription.required" =>
                 "An active subscription is required for this operation.",
 
