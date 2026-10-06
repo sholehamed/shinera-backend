@@ -131,6 +131,13 @@ public sealed class SystemPermissionCatalogSeedContributor
                 SystemPermissionCatalog.Customers.AddNote
             ]),
         new(
+            SystemPermissionCatalog.Appointments.Resource,
+            "Appointments",
+            [
+                SystemPermissionCatalog.Appointments.View,
+                SystemPermissionCatalog.Appointments.Create
+            ]),
+        new(
             SystemPermissionCatalog.Dashboard.Resource,
             "Dashboard",
             [
