@@ -136,7 +136,7 @@ public sealed class CreateServiceCategoryCommandHandler(
             cancellationToken);
 
         var tenantId = currentTenant.TenantId
-            ?? throw new Application.SharedKernel.Exceptions.TenantAccessException(
+            ?? throw new TenantAccessException(
                 "tenant.context_missing",
                 "A tenant context is required for service catalog operations.");
 

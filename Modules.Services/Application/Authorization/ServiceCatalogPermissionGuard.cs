@@ -1,5 +1,6 @@
 using Application.SharedKernel.Exceptions;
 using Modules.System.Identity.Application.Authorization;
+using Modules.System.Identity.Domain.Entities;
 
 namespace Modules.System.Services.Application.Authorization;
 
@@ -32,7 +33,7 @@ internal static class ServiceCatalogPermissionGuard
         if (!grants.Any(x =>
                 string.Equals(
                     x.Scope,
-                    "Tenant",
+                    PermissionScopeType.Tenant.ToString(),
                     StringComparison.Ordinal)))
         {
             throw new ForbiddenAccessException();

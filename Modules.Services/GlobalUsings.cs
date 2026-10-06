@@ -1,5 +1,6 @@
 global using Application.SharedKernel;
 global using Application.SharedKernel.Abstractions;
+global using Application.SharedKernel.Exceptions;
 global using Application.SharedKernel.Abstractions.Messaging;
 global using Application.SharedKernel.Models;
 global using Ardalis.GuardClauses;

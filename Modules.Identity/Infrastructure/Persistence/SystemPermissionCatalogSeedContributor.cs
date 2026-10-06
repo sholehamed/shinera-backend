@@ -210,6 +210,11 @@ public sealed class SystemPermissionCatalogSeedContributor
             }
         }
 
+        await SynchronizeWorkspaceOwnerPermissionsAsync(
+            db,
+            tenantContext,
+            permissions);
+
         var configuration =
             serviceProvider.GetRequiredService<IConfiguration>();
 
@@ -291,6 +296,79 @@ public sealed class SystemPermissionCatalogSeedContributor
                     db.PermissionAssignments.AddRange(missing);
                     await db.SaveChangesAsync();
                 }
+            }
+        }
+    }
+
+    private static async Task SynchronizeWorkspaceOwnerPermissionsAsync(
+        IdentityDbContext db,
+        ITenantContext tenantContext,
+        IReadOnlyCollection<Permission> permissions)
+    {
+        var ownerPermissionIds = permissions
+            .Where(permission =>
+                SystemPermissionCatalog.WorkspaceOwnerPermissionKeys
+                    .Contains(permission.Code))
+            .Select(permission => permission.Id)
+            .ToHashSet();
+
+        if (ownerPermissionIds.Count == 0)
+            return;
+
+        using (tenantContext.DisableFilter())
+        {
+            var ownerRoles = await db.Roles
+                .AsNoTracking()
+                .Where(role =>
+                    role.NormalizedName == "OWNER" &&
+                    role.IsActive)
+                .Select(role => new
+                {
+                    role.Id,
+                    role.TenantId
+                })
+                .ToListAsync();
+
+            var missingAssignments =
+                new List<PermissionAssignment>();
+
+            foreach (var role in ownerRoles)
+            {
+                var existingPermissionIds =
+                    await db.PermissionAssignments
+                        .AsNoTracking()
+                        .Where(assignment =>
+                            assignment.TenantId == role.TenantId &&
+                            assignment.SubjectType ==
+                                PermissionSubjectType.Role &&
+                            assignment.SubjectId == role.Id &&
+                            assignment.ScopeType ==
+                                PermissionScopeType.Tenant &&
+                            assignment.IsActive)
+                        .Select(assignment =>
+                            assignment.PermissionId)
+                        .ToListAsync();
+
+                missingAssignments.AddRange(
+                    ownerPermissionIds
+                        .Where(permissionId =>
+                            !existingPermissionIds.Contains(
+                                permissionId))
+                        .Select(permissionId =>
+                            new PermissionAssignment(
+                                role.TenantId,
+                                permissionId,
+                                PermissionSubjectType.Role,
+                                role.Id,
+                                PermissionScopeType.Tenant)));
+            }
+
+            if (missingAssignments.Count > 0)
+            {
+                db.PermissionAssignments.AddRange(
+                    missingAssignments);
+
+                await db.SaveChangesAsync();
             }
         }
     }
