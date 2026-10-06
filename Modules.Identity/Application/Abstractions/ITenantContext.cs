@@ -4,10 +4,13 @@ public interface ITenantContext
 {
     Guid? UserId { get; }
     Guid? ActiveTenantId { get; }
+    Guid? ActiveBranchId { get; }
     bool IsSuperAdmin { get; }
 
     IReadOnlyCollection<Guid> ReadableTenantIds { get; }
     IReadOnlyCollection<Guid> WritableTenantIds { get; }
+    IReadOnlyCollection<Guid> ReadableBranchIds { get; }
+    IReadOnlyCollection<Guid> WritableBranchIds { get; }
 
     bool IsFilterDisabled { get; }
 
@@ -18,5 +21,8 @@ public interface ITenantContext
         bool isSuperAdmin,
         Guid[] readable,
         Guid[] writable,
-        Guid? activeTenantId);
+        Guid? activeTenantId,
+        Guid[]? readableBranches = null,
+        Guid[]? writableBranches = null,
+        Guid? activeBranchId = null);
 }

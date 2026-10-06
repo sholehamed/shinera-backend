@@ -1,10 +1,15 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Modules.System.Identity.Domain.Entities;
 
 namespace Modules.System.Identity.Application.Abstractions;
 
 public interface IIdentityDbContext : IBaseDbContext
 {
+    DatabaseFacade Database { get; }
+
+    DbSet<Branch> Branches { get; }
+    DbSet<BranchMembership> BranchMemberships { get; }
     DbSet<GroupRole> GroupRoles { get; }
     DbSet<Group> Groups { get; }
     DbSet<Module> Modules { get; }
