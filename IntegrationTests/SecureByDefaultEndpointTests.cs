@@ -18,6 +18,8 @@ public sealed class SecureByDefaultEndpointTests(
     [InlineData("/System/Resources/lookup")]
     [InlineData("/System/Permissions/lookup")]
     [InlineData("/Subscription/Entitlements/current")]
+    [InlineData("/Services/ServiceCategories")]
+    [InlineData("/Services/Services")]
     public async Task ManagedEndpoints_WithoutAuthentication_ReturnUnauthorized(
         string path)
     {

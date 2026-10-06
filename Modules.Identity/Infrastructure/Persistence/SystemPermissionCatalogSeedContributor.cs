@@ -102,6 +102,15 @@ public sealed class SystemPermissionCatalogSeedContributor
                 SystemPermissionCatalog.Menus.Delete
             ]),
         new(
+            SystemPermissionCatalog.Services.Resource,
+            "Services",
+            [
+                SystemPermissionCatalog.Services.View,
+                SystemPermissionCatalog.Services.Create,
+                SystemPermissionCatalog.Services.Update,
+                SystemPermissionCatalog.Services.Delete
+            ]),
+        new(
             SystemPermissionCatalog.Dashboard.Resource,
             "Dashboard",
             [
@@ -201,6 +210,11 @@ public sealed class SystemPermissionCatalogSeedContributor
             }
         }
 
+        await SynchronizeWorkspaceOwnerPermissionsAsync(
+            db,
+            tenantContext,
+            permissions);
+
         var configuration =
             serviceProvider.GetRequiredService<IConfiguration>();
 
@@ -282,6 +296,105 @@ public sealed class SystemPermissionCatalogSeedContributor
                     db.PermissionAssignments.AddRange(missing);
                     await db.SaveChangesAsync();
                 }
+            }
+        }
+    }
+
+    private static async Task SynchronizeWorkspaceOwnerPermissionsAsync(
+        IdentityDbContext db,
+        ITenantContext tenantContext,
+        IReadOnlyCollection<Permission> permissions)
+    {
+        var workspaceOwnerPermissions = permissions
+            .Where(permission =>
+                SystemPermissionCatalog.WorkspaceOwnerPermissionKeys
+                    .Contains(permission.Code))
+            .ToArray();
+
+        var ownerPermissionIds = workspaceOwnerPermissions
+            .Select(permission => permission.Id)
+            .ToHashSet();
+
+        var baselineOwnerPermissionIds = workspaceOwnerPermissions
+            .Where(permission =>
+                !permission.Code.StartsWith(
+                    $"{SystemPermissionCatalog.Services.Resource}.",
+                    StringComparison.Ordinal))
+            .Select(permission => permission.Id)
+            .ToHashSet();
+
+        if (ownerPermissionIds.Count == 0 ||
+            baselineOwnerPermissionIds.Count == 0)
+        {
+            return;
+        }
+
+        using (tenantContext.DisableFilter())
+        {
+            var ownerRoles = await db.Roles
+                .AsNoTracking()
+                .Where(role =>
+                    role.NormalizedName == "OWNER" &&
+                    role.IsActive)
+                .Select(role => new
+                {
+                    role.Id,
+                    role.TenantId
+                })
+                .ToListAsync();
+
+            var missingAssignments =
+                new List<PermissionAssignment>();
+
+            foreach (var role in ownerRoles)
+            {
+                var existingPermissionIds =
+                    (await db.PermissionAssignments
+                        .AsNoTracking()
+                        .Where(assignment =>
+                            assignment.TenantId == role.TenantId &&
+                            assignment.SubjectType ==
+                                PermissionSubjectType.Role &&
+                            assignment.SubjectId == role.Id &&
+                            assignment.ScopeType ==
+                                PermissionScopeType.Tenant &&
+                            assignment.IsActive)
+                        .Select(assignment =>
+                            assignment.PermissionId)
+                        .ToListAsync())
+                    .ToHashSet();
+
+                // A role name is not a trust boundary. Only roles that already
+                // carry the complete pre-Services workspace-owner baseline are
+                // eligible for catalog expansion. This identifies Owners created
+                // by registration without granting privileges to an arbitrary
+                // custom role that happens to be named "Owner".
+                if (!baselineOwnerPermissionIds.IsSubsetOf(
+                        existingPermissionIds))
+                {
+                    continue;
+                }
+
+                missingAssignments.AddRange(
+                    ownerPermissionIds
+                        .Where(permissionId =>
+                            !existingPermissionIds.Contains(
+                                permissionId))
+                        .Select(permissionId =>
+                            new PermissionAssignment(
+                                role.TenantId,
+                                permissionId,
+                                PermissionSubjectType.Role,
+                                role.Id,
+                                PermissionScopeType.Tenant)));
+            }
+
+            if (missingAssignments.Count > 0)
+            {
+                db.PermissionAssignments.AddRange(
+                    missingAssignments);
+
+                await db.SaveChangesAsync();
             }
         }
     }
