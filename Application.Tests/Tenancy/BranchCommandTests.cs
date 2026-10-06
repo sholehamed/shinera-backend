@@ -171,6 +171,48 @@ public sealed class BranchCommandTests
     }
 
     [Fact]
+    public async Task Update_ReadableButNotWritableBranch_IsDenied()
+    {
+        await using var fixture =
+            await CreateFixtureAsync();
+
+        var branch = new Branch(
+            fixture.TenantId,
+            "Read only",
+            isMain: true);
+
+        fixture.Db.Branches.Add(branch);
+        await fixture.Db.SaveChangesAsync();
+
+        fixture.TenantContext.Initialize(
+            fixture.UserId,
+            false,
+            [fixture.TenantId],
+            [fixture.TenantId],
+            fixture.TenantId,
+            [branch.Id],
+            [],
+            branch.Id);
+
+        var handler =
+            new BranchUpdateCommandHandler(
+                fixture.Db,
+                fixture.TenantContext,
+                new StubAuthorizationService(
+                    PermissionScopeType.Branch,
+                    branch.Id));
+
+        await Assert.ThrowsAsync<ForbiddenAccessException>(
+            () => handler.Handle(
+                new BranchUpdateCommand(
+                    branch.Id,
+                    "Changed",
+                    null,
+                    null),
+                CancellationToken.None));
+    }
+
+    [Fact]
     public async Task Disable_MainBranch_ReturnsConflict()
     {
         await using var fixture =
