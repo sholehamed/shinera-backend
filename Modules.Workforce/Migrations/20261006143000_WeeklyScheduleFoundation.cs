@@ -41,9 +41,6 @@ public partial class WeeklyScheduleFoundation : Migration
                     "CK_StaffWeeklyScheduleDays_DayOfWeek",
                     "[DayOfWeek] >= 0 AND [DayOfWeek] <= 6");
                 table.CheckConstraint(
-                    "CK_StaffWeeklyScheduleDays_DayOfWeek",
-                    "[DayOfWeek] BETWEEN 0 AND 6");
-                table.CheckConstraint(
                     "CK_StaffWeeklyScheduleDays_WorkingHours",
                     "([IsDayOff] = 1 AND [StartTime] IS NULL AND [EndTime] IS NULL) OR ([IsDayOff] = 0 AND [StartTime] IS NOT NULL AND [EndTime] IS NOT NULL AND [StartTime] < [EndTime])");
                 table.ForeignKey(
