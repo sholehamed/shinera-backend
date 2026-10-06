@@ -61,6 +61,56 @@ public sealed class SystemPermissionCatalogSeedContributorTests
 
             db.Roles.Add(ownerRole);
             await db.SaveChangesAsync();
+
+            var systemModule = new Modules.System.Identity.Domain.Entities.Module(
+                "system",
+                "System",
+                null,
+                0);
+
+            db.Modules.Add(systemModule);
+
+            var baselineKeys =
+                SystemPermissionCatalog.WorkspaceOwnerPermissionKeys
+                    .Where(key =>
+                        !key.StartsWith(
+                            $"{SystemPermissionCatalog.Services.Resource}.",
+                            StringComparison.Ordinal))
+                    .ToArray();
+
+            foreach (var resourceGroup in
+                     baselineKeys.GroupBy(
+                         key => key.Split('.')[0]))
+            {
+                var resource = new Resource(
+                    systemModule.Id,
+                    resourceGroup.Key,
+                    resourceGroup.Key,
+                    null,
+                    0);
+
+                db.Resources.Add(resource);
+
+                foreach (var key in resourceGroup)
+                {
+                    var permission = new Permission(
+                        key,
+                        resource,
+                        key,
+                        null);
+
+                    db.Permissions.Add(permission);
+                    db.PermissionAssignments.Add(
+                        new PermissionAssignment(
+                            tenantId,
+                            permission.Id,
+                            PermissionSubjectType.Role,
+                            ownerRole.Id,
+                            PermissionScopeType.Tenant));
+                }
+            }
+
+            await db.SaveChangesAsync();
         }
 
         var services = new ServiceCollection();
@@ -113,6 +163,93 @@ public sealed class SystemPermissionCatalogSeedContributorTests
                     "services.view"
                 },
                 servicePermissionCodes);
+        }
+    }
+
+    [Fact]
+    public async Task Seed_DoesNotElevateArbitraryRoleNamedOwner()
+    {
+        var tenantId = Guid.NewGuid();
+        var tenantContext = new TenantContext();
+        tenantContext.Initialize(
+            Guid.NewGuid(),
+            false,
+            [tenantId],
+            [tenantId],
+            tenantId);
+
+        await using var connection =
+            new SqliteConnection("Data Source=:memory:");
+
+        await connection.OpenAsync();
+
+        var options =
+            new DbContextOptionsBuilder<IdentityDbContext>()
+                .UseSqlite(connection)
+                .Options;
+
+        await using var db =
+            new TestIdentityDbContext(
+                options,
+                tenantContext);
+
+        await db.Database.EnsureCreatedAsync();
+
+        var customOwner = new Role(
+            tenantId,
+            "Owner",
+            "Custom role with colliding name");
+
+        using (tenantContext.DisableFilter())
+        {
+            db.Tenants.Add(
+                new Tenant(tenantId)
+                {
+                    Name = "Tenant",
+                    Slug = $"tenant-{tenantId:N}",
+                    IsActive = true
+                });
+
+            db.Roles.Add(customOwner);
+            await db.SaveChangesAsync();
+        }
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IdentityDbContext>(db);
+        services.AddSingleton<ITenantContext>(tenantContext);
+        services.AddSingleton<IConfiguration>(
+            new ConfigurationBuilder().Build());
+
+        await using var provider =
+            services.BuildServiceProvider();
+
+        var seeder =
+            new SystemPermissionCatalogSeedContributor();
+
+        await seeder.SeedAsync(provider);
+
+        using (tenantContext.DisableFilter())
+        {
+            var assignedServicePermissions =
+                await db.PermissionAssignments
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.TenantId == tenantId &&
+                        x.SubjectType ==
+                            PermissionSubjectType.Role &&
+                        x.SubjectId == customOwner.Id)
+                    .Join(
+                        db.Permissions.AsNoTracking(),
+                        assignment => assignment.PermissionId,
+                        permission => permission.Id,
+                        (assignment, permission) =>
+                            permission.Code)
+                    .CountAsync(code =>
+                        code.StartsWith("services."));
+
+            Assert.Equal(
+                0,
+                assignedServicePermissions);
         }
     }
 

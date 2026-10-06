@@ -305,15 +305,29 @@ public sealed class SystemPermissionCatalogSeedContributor
         ITenantContext tenantContext,
         IReadOnlyCollection<Permission> permissions)
     {
-        var ownerPermissionIds = permissions
+        var workspaceOwnerPermissions = permissions
             .Where(permission =>
                 SystemPermissionCatalog.WorkspaceOwnerPermissionKeys
                     .Contains(permission.Code))
+            .ToArray();
+
+        var ownerPermissionIds = workspaceOwnerPermissions
             .Select(permission => permission.Id)
             .ToHashSet();
 
-        if (ownerPermissionIds.Count == 0)
+        var baselineOwnerPermissionIds = workspaceOwnerPermissions
+            .Where(permission =>
+                !permission.Code.StartsWith(
+                    $"{SystemPermissionCatalog.Services.Resource}.",
+                    StringComparison.Ordinal))
+            .Select(permission => permission.Id)
+            .ToHashSet();
+
+        if (ownerPermissionIds.Count == 0 ||
+            baselineOwnerPermissionIds.Count == 0)
+        {
             return;
+        }
 
         using (tenantContext.DisableFilter())
         {
@@ -335,7 +349,7 @@ public sealed class SystemPermissionCatalogSeedContributor
             foreach (var role in ownerRoles)
             {
                 var existingPermissionIds =
-                    await db.PermissionAssignments
+                    (await db.PermissionAssignments
                         .AsNoTracking()
                         .Where(assignment =>
                             assignment.TenantId == role.TenantId &&
@@ -347,7 +361,19 @@ public sealed class SystemPermissionCatalogSeedContributor
                             assignment.IsActive)
                         .Select(assignment =>
                             assignment.PermissionId)
-                        .ToListAsync();
+                        .ToListAsync())
+                    .ToHashSet();
+
+                // A role name is not a trust boundary. Only roles that already
+                // carry the complete pre-Services workspace-owner baseline are
+                // eligible for catalog expansion. This identifies Owners created
+                // by registration without granting privileges to an arbitrary
+                // custom role that happens to be named "Owner".
+                if (!baselineOwnerPermissionIds.IsSubsetOf(
+                        existingPermissionIds))
+                {
+                    continue;
+                }
 
                 missingAssignments.AddRange(
                     ownerPermissionIds
