@@ -79,5 +79,14 @@ jobs:
             --output /tmp/crm-migrations.sql
           test -s /tmp/crm-migrations.sql
 
+      - name: Verify Appointments migration chain
+        run: |
+          dotnet ef migrations script --idempotent \
+            --project Modules.Appointments/Modules.Appointments.csproj \
+            --startup-project Web/Web.csproj \
+            --context AppointmentsDbContext \
+            --output /tmp/appointments-migrations.sql
+          test -s /tmp/appointments-migrations.sql
+
       - name: Test
         run: dotnet test shinera-back.slnx --configuration Release --no-build --verbosity normal
