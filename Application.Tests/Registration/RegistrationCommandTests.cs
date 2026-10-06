@@ -173,6 +173,8 @@ public sealed class RegistrationCommandTests
                     .ToListAsync();
 
             Assert.Equal("Demo Salon", tenant.Name);
+            Assert.Equal("Asia/Tehran", tenant.DefaultTimeZoneId);
+            Assert.Equal("Asia/Tehran", branch.TimeZoneId);
             Assert.Equal("09120000000", user.Phone);
             Assert.Equal(BusinessMode.Salon, profile.Mode);
             Assert.Equal("Beauty Salon", profile.BusinessType);
